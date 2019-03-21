@@ -46,6 +46,7 @@ static char *cov_level_int(unsigned char level) {
 #define TYPE_STRING 1
 #define TYPE_INT 2
 #define TYPE_JSON 3
+#define TYPE_NULL 9
 
 
 #define OP_OPEN '['
@@ -57,7 +58,7 @@ static char *cov_level_int(unsigned char level) {
  *
  */
 typedef union Log_value {
-    size_t vallong;
+    int vallong;
     char *valstring;
     cJSON *valjson;
 } Log_value;

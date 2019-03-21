@@ -63,6 +63,26 @@ static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
     return copy;
 }
 
+int is_end(char *line) {
+    if (*line == '\0') return 1;
+    if (*line == '\n') return 1;
+    if (*line == '\r') return 1;
+    return 0;
+}
+
+int has_op(char *line) {
+    char *tmp = line;
+    while (*tmp != '\0') {
+        if (*tmp == OP_OPEN || *tmp == OP_CLOSE) return 1;
+        tmp ++;
+    }
+    return 0;
+}
+
+int is_int(char *str) {
+
+}
+
 int parse_app(Log *log, char *line) {
     char *steper = line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
@@ -99,9 +119,8 @@ int parse_app(Log *log, char *line) {
                 }
 
                 // 重复时取最先的一个
-                if (*(steper - 1) == OP_OPEN) {
-                    continue;
-                }
+                if (*(steper - 1) == OP_OPEN) continue;
+
                 if (STACK_IS_EMPTY(stack)) {
                     start = steper;
                     inval = 1;
@@ -111,10 +130,8 @@ int parse_app(Log *log, char *line) {
                 break;
             case OP_CLOSE:
                 // 重复时取最后一个
-                if (*(steper + 1) == OP_OPEN) {
-                    steper++;
-                    continue;
-                }
+                while (*(steper + 1) == OP_CLOSE) steper++;
+
                 POP(stack, &stch);
 
                 if (STACK_IS_EMPTY(stack)) {
@@ -124,10 +141,15 @@ int parse_app(Log *log, char *line) {
                     if (start) {
                         valLen = end - start;
                         // 值
-                        L_SET_TYPE(field, TYPE_STRING);
                         field->val->valstring = sub_str(start + 1, valLen - 1);
-                        //fixme 最终会多创建一个
-                        L_ADD_FIELD(field);
+                        if (field->val->valstring == NULL) {
+                            L_SET_TYPE(field, TYPE_NULL);
+                        } else {
+                            L_SET_TYPE(field, TYPE_STRING);
+                        }
+
+                        if (!is_end(steper + 1) && has_op(steper + 1))
+                            L_ADD_FIELD(field);
 
                         valLen = 0;
                     }
@@ -145,7 +167,7 @@ int parse_app(Log *log, char *line) {
 
     //结尾存在字符串
     if (key) {
-        log->extra = sub_trim(key + 1, steper - key - 1);
+        log->extra = sub_trim(key, steper - key);
     }
 
     STACK_FREE(stack);
