@@ -11,7 +11,6 @@
  * 能够支持的最多日志文件数量
  */
 #define MAX_LOGFILE 2
-#define OP_LEN 100
 
 
 #define COL_LEVEL "l"

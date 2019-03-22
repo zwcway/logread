@@ -165,11 +165,11 @@ void ReadPipe() {
 
     int s_read = 0, s_write;
     pid_t pid;
-    char buftrans_in[512];
-    char buftrans_out[512];
+    char buftrans_in[MAX_LINE];
+    char buftrans_out[MAX_LINE];
 
     if (pid = fork()) {
-        while ((s_read = read(fdpipe[0], buftrans_in, OP_LEN))) {
+        while ((s_read = read(fdpipe[0], buftrans_in, MAX_LINE - 1))) {
             format(buftrans_in);
         }
     }
