@@ -1,7 +1,8 @@
 //
 // Created by Administrator on 2019/3/19.
 //
-#include <ctype.h>
+#include "type.h"
+
 
 int isInteger(char *str) {
     int j = 0, len = 0;
@@ -18,6 +19,16 @@ int isInteger(char *str) {
     if (j == len) return 1;
 
     return 0;
+}
+
+int conv2IpV4(char *ipAddress, struct in_addr *addr) {
+    int result = inet_pton(AF_INET, ipAddress, addr);
+    return result != 0;
+}
+
+int isIpV4(char *ipAddress) {
+    struct in_addr sa;
+    return conv2IpV4(ipAddress, &sa);
 }
 
 int guessType(char *str) {

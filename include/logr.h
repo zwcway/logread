@@ -1,7 +1,7 @@
 #ifndef LOGR_LOGR_H
 #define LOGR_LOGR_H
 
-#define VERSION "0.2.1"
+#define VERSION "0.2.2"
 #define PROGRAM "logr"
 /**
  * 单次读取一行的最大字符数
@@ -13,6 +13,7 @@
 #define MAX_LOGFILE 2
 
 
+#define COL_HOST  "h"
 #define COL_LEVEL "l"
 #define COL_TIME  "t"
 #define COL_FILE  "f"

@@ -18,7 +18,8 @@
 #define C_L_CYAN               "\e[1;36m"
 #define C_GRAY                 "\e[0;37m"
 #define C_WHITE                "\e[1;37m"
- 
+#define C_L_GRAY               "\e[0;90m"
+
 #define C_BOLD                 "\e[1m"
 #define C_UNDERLINE            "\e[4m"
 #define C_BLINK                "\e[5m"

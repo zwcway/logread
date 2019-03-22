@@ -28,14 +28,21 @@ static void hl_op(const char *key){
  * @param key
  */
 static void hl_str(const char *key){
-    printf(C_GRAY"%s"C_NONE, key);
+    printf(C_L_GRAY"%s"C_NONE, key);
 }
 /**
  * 整型
  * @param key
  */
-static void hl_int(const int key){
-    printf(C_GRAY"%d"C_NONE, key);
+static void hl_long(const long key){
+    printf(C_L_GRAY"%ld"C_NONE, key);
+}
+/**
+ * 浮点型
+ * @param key
+ */
+static void hl_double(const double key){
+    printf(C_L_GRAY"%lf"C_NONE, key);
 }
 /**
  * 时间

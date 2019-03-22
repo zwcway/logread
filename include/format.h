@@ -5,6 +5,7 @@
 #ifndef LOGR_FORMAT_H
 #define LOGR_FORMAT_H
 
+#include <arpa/inet.h>
 #include "cJSON.h"
 #include "string.h"
 
@@ -44,21 +45,21 @@ static char *cov_level_int(unsigned char level) {
 }
 
 #define TYPE_STRING 1
-#define TYPE_INT 2
-#define TYPE_JSON 3
+#define TYPE_LONG 2
+#define TYPE_DOUBLE 3
+#define TYPE_JSON 4
 #define TYPE_NULL 9
-
 
 #define OP_OPEN '['
 #define OP_CLOSE ']'
 #define OP_SPER  ' '
 
-
 /**
  *
  */
 typedef union Log_value {
-    int vallong;
+    double valdbl;
+    long vallong;
     char *valstring;
     cJSON *valjson;
 } Log_value;
@@ -77,14 +78,23 @@ typedef struct Log_field {
  * 日志
  */
 typedef struct Log {
-    unsigned char level;
+    struct level {
+        unsigned char lint;
+        char *lstr;
+    } level ;
+    struct host {
+        in_addr_t lip;
+        char *ip;
+    } host;
     /** 生成时间 */
-    char *time;
-    int ts;
+    struct time {
+        int ts;
+        char *str;
+    } time;
     /** 调用文件 */
     char *file;
     /** 日志id */
-    int logid;
+    long logid;
     /** 其他扩展字符串 */
     char *extra;
     /** 链表 */
@@ -104,6 +114,18 @@ typedef struct Log {
 #define L_SET_INT(field)        L_SET_TYPE(field, TYPE_INT)
 #define L_SET_JSON(field)       L_SET_TYPE(field, TYPE_JSON)
 
+#define L_INIT_LOG(log)   do { \
+log.level.lstr = 0; \
+log.level.lint = 0; \
+log.host.ip = 0; \
+log.host.lip = 0; \
+log.time.str = 0; \
+log.time.ts = 0; \
+log.file = 0; \
+log.logid = 0; \
+log.extra = 0; \
+log.value = 0; \
+} while(0)
 
 #define L_INIT_FIELD(field)    do { \
 field = (Log_field *)malloc(sizeof(Log_field)); \

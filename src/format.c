@@ -5,6 +5,7 @@
 #include "stack.h"
 #include "format.h"
 #include "output.h"
+#include "type.h"
 
 void field_free(Log_field *f) {
     Log_field *next;
@@ -23,9 +24,11 @@ void field_free(Log_field *f) {
 
 void log_free(Log *log) {
 
+    if (log->level.lstr) free(log->level.lstr);
     if (log->file) free(log->file);
-    if (log->time) free(log->time);
+    if (log->time.str) free(log->time.str);
     if (log->extra) free(log->extra);
+    if (log->host.ip) free(log->host.ip);
 
     if (log->value) field_free(log->value);
 }
@@ -77,10 +80,6 @@ int has_op(char *line) {
         tmp ++;
     }
     return 0;
-}
-
-int is_int(char *str) {
-
 }
 
 int parse_app(Log *log, char *line) {
@@ -141,11 +140,15 @@ int parse_app(Log *log, char *line) {
                     if (start) {
                         valLen = end - start;
                         // 值
-                        field->val->valstring = sub_str(start + 1, valLen - 1);
-                        if (field->val->valstring == NULL) {
+                        tmp = sub_str(start + 1, valLen - 1);
+                        if (tmp == NULL) {
                             L_SET_TYPE(field, TYPE_NULL);
+                        } else if (isInteger(tmp)) {
+                            L_SET_TYPE(field, TYPE_LONG);
+                            field->val->vallong = atof(tmp);
                         } else {
                             L_SET_TYPE(field, TYPE_STRING);
+                            field->val->valstring = tmp;
                         }
 
                         if (!is_end(steper + 1) && has_op(steper + 1))
@@ -175,19 +178,40 @@ int parse_app(Log *log, char *line) {
 
 
 int format_ral(const char *log_line) {
+    return 0;
 }
 
+/**
+ * TODO 使用词法分析器
+ *
+ * @param log_line
+ * @return
+ */
 int format_app(const char *log_line) {
     Log app_log;
     int colcnt = 0;
     char *log = (char *)log_line;
     char *stt1, *stt2, *tmp;
 
+    L_INIT_LOG(app_log);
+
     // level
     stt1 = strstr(log, ":");
     tmp = sub_str(log, stt1 - log);
-    app_log.level = cov_level_str(tmp);
-    free(tmp); tmp = 0;
+
+    if (isIpV4(tmp)) {
+        app_log.host.ip = tmp;
+        app_log.host.lip = 0;
+        colcnt++;
+
+        log = ++stt1;
+
+        stt1 = strstr(log, ":");
+        tmp = sub_trim(log, stt1 - log);
+    }
+    app_log.level.lstr = tmp;
+    app_log.level.lint = cov_level_str(tmp);
+    tmp = 0;
     colcnt++;
 
     // file
@@ -197,9 +221,11 @@ int format_app(const char *log_line) {
     colcnt++;
 
     // time
-    app_log.time = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    app_log.ts = 0;
+    app_log.time.str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    app_log.time.ts = 0;
     colcnt++;
+
+    app_log.logid = 0;
 
     // extra
     app_log.extra = 0;

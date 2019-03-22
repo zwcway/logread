@@ -85,7 +85,7 @@ int ParseArg(int argc, char *argv[]) {
                 errflg++;
                 break;
             default:
-                printf("the option is%c--->%d, the argu is %s\n", c, c, optarg);
+//                printf("the option is%c--->%d, the argu is %s\n", c, c, optarg);
                 break;
         }
     }
@@ -157,24 +157,10 @@ void ReadLine() {
  * 从管道中读取日志
  */
 void ReadPipe() {
-    int fdpipe[2];
-    if (pipe(fdpipe) < 0) {
-        printf("open pipe failed.\n");
-        exit(1);
-    }
+    char buftrans_in[MAX_LINE + 1];
 
-    int s_read = 0, s_write;
-    pid_t pid;
-    char buftrans_in[MAX_LINE];
-    char buftrans_out[MAX_LINE];
-
-    if (pid = fork()) {
-        while ((s_read = read(fdpipe[0], buftrans_in, MAX_LINE - 1))) {
-            format(buftrans_in);
-        }
-    }
-    if (close(fdpipe[1]) == -1)
-        perror("close - child");
+    while (fgets(buftrans_in , MAX_LINE , stdin))
+        format(buftrans_in);
 }
 
 
