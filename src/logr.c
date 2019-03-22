@@ -21,24 +21,26 @@ void PrintHelp(char *prog) {
     printf("  -h, --help           显示帮助内容\n");
     printf("\n");
     printf("  -c, --column         过滤列。多个列使用英文逗号分隔。内置列：\n");
-    printf("	                     time(日志生成时间): %s\n", COL_TIME);
-    printf("	                     level(日志等级)   : %s\n", COL_LEVEL);
-    printf("	                     file(来源文件)    : %s\n", COL_FILE);
+    printf("	                     time (日志生成时间): %s\n", COL_TIME);
+    printf("	                     level(日志等级)    : %s\n", COL_LEVEL);
+    printf("	                     file (来源文件)    : %s\n", COL_FILE);
     printf("	                     logid(日志ID)     : %s\n", COL_LOGID);
     printf("	                     extra(其他)       : %s\n", COL_EXTRA);
     printf("\n");
     printf("  -f, --filter         过滤日志。多个条件使用逗号分隔。格式如下：\n");
-    printf("                         key=val   任意位置查找\n");
-    printf("                         key~val   正则查找\n");
-    printf("                         key>val   数值大于val\n");
-    printf("                         key<val   数值小于val\n");
-    printf("                         key>=val  数值大于等于val\n");
-    printf("                         key<=val  数值小于等于val\n\n");
+    printf("                         key=val   指定字段中，任意位置模糊查找【待】\n");
+    printf("                         key~val   指定字段中，正则查找【待】\n");
+    printf("                         key>val   指定字段中，数值大于val【待】\n");
+    printf("                         key<val   指定字段中，数值小于val【待】\n");
+    printf("                         key>=val  指定字段中，数值大于等于val【待】\n");
+    printf("                         key<=val  指定字段中，数值小于等于val【待】\n");
+    printf("                         =val      任意位置模糊查找【待】\n");
+    printf("                         ~val      正则查找【待】\n");
     printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000,uri~^bizas'\n");
     printf("tail -f ral-worker.log | logr -c t -c uri -f 'cost>1000' -f 'uri~^bizas'\n");
-    printf("    表示仅显示日志时间和接口地址两列，并且只显示耗时大于1000\n并且接口路径以bizas开始的日志\n");
+    printf("    表示仅显示日志时间和接口地址两列，并且只显示耗时大于1000，并且接口路径以bizas开始的日志\n");
 }
 
 void PrintVersion(char *prog) {
