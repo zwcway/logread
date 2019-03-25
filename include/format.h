@@ -5,9 +5,10 @@
 #ifndef LOGR_FORMAT_H
 #define LOGR_FORMAT_H
 
+#include <string.h>
 #include <arpa/inet.h>
 #include "cJSON.h"
-#include "string.h"
+#include "type.h"
 
 
 #define LEVEL_DEBUG 1
@@ -43,12 +44,6 @@ static char *cov_level_int(unsigned char level) {
         default:return LEVEL_STR_UNKNOWN;
     }
 }
-
-#define TYPE_STRING 1
-#define TYPE_LONG 2
-#define TYPE_DOUBLE 3
-#define TYPE_JSON 4
-#define TYPE_NULL 9
 
 #define OP_OPEN '['
 #define OP_CLOSE ']'
@@ -88,7 +83,7 @@ typedef struct Log {
     } host;
     /** 生成时间 */
     struct time {
-        int ts;
+        time_t ts;
         char *str;
     } time;
     /** 调用文件 */

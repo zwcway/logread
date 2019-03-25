@@ -9,7 +9,44 @@
 #include "highlight.h"
 
 void print_json(cJSON *json) {
+    cJSON *next;
+    if (!json) return;
 
+    while(json) {
+        next = json->next;
+
+        switch (json->type) {
+            case cJSON_String:
+                P_JKEY(json->string);
+                P_JSTR(json->valuestring);
+                break;
+            case cJSON_Number:
+                P_JKEY(json->string);
+                if (json->valuedouble == json->valueint) hl_jint(json->valueint);
+                else hl_jdbl(json->valuedouble);
+                break;
+            case cJSON_False:
+                hl_jkey(json->string);
+                hl_jstr(json->valueint ? "true" : "false");
+                break;
+            case cJSON_Object:
+                if (json->string) P_JKEY(json->string);
+
+                hl_jstr("{");
+                print_json(json->child);
+                hl_jstr("}");
+                break;
+            case cJSON_Array:
+                hl_jstr("[");
+                print_json(json->child);
+                hl_jstr("]");
+                break;
+        }
+
+        if (next) hl_jcma(",");
+
+        json = next;
+    }
 }
 
 void print_field(const Log_field *field) {
@@ -27,7 +64,7 @@ void print_field(const Log_field *field) {
             hl_double(field->val->valdbl);
             break;
         case TYPE_JSON:
-//            hl_int(field->val->valjson);
+            print_json(field->val->valjson);
             break;
     }
 }

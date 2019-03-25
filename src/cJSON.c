@@ -191,16 +191,16 @@ static unsigned parse_hex4(const char *str)
 static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 static const char *parse_string(cJSON *item,const char *str)
 {
-	const char *ptr=str+1;char *ptr2;char *out;int len=0;unsigned uc,uc2;
-	if (*str!='\"') {ep=str;return 0;}	/* not a string! */
-	
-	while (*ptr!='\"' && *ptr && ++len) if (*ptr++ == '\\') ptr++;	/* Skip escaped quotes. */
+	const char *ptr=str+1,strqut=*str;char *ptr2;char *out;int len=0;unsigned uc,uc2;;
+	if (strqut!='\"' && strqut!='\'') {ep=str;return 0;}	/* not a string! */
+
+	while (*ptr!=strqut && *ptr && ++len) if (*ptr++ == '\\') ptr++;	/* Skip escaped quotes. */
 	
 	out=(char*)cJSON_malloc(len+1);	/* This is how long we need for the string, roughly. */
 	if (!out) return 0;
 	
 	ptr=str+1;ptr2=out;
-	while (*ptr!='\"' && *ptr)
+	while (*ptr!=strqut && *ptr)
 	{
 		if (*ptr!='\\') *ptr2++=*ptr++;
 		else
@@ -242,7 +242,7 @@ static const char *parse_string(cJSON *item,const char *str)
 		}
 	}
 	*ptr2=0;
-	if (*ptr=='\"') ptr++;
+	if (*ptr==strqut) ptr++;
 	item->valuestring=out;
 	item->type=cJSON_String;
 	return ptr;
@@ -360,7 +360,7 @@ static const char *parse_value(cJSON *item,const char *value)
 	if (!strncmp(value,"null",4))	{ item->type=cJSON_NULL;  return value+4; }
 	if (!strncmp(value,"false",5))	{ item->type=cJSON_False; return value+5; }
 	if (!strncmp(value,"true",4))	{ item->type=cJSON_True; item->valueint=1;	return value+4; }
-	if (*value=='\"')				{ return parse_string(item,value); }
+	if (*value=='\"' || *value=='\'')				{ return parse_string(item,value); }
 	if (*value=='-' || (*value>='0' && *value<='9'))	{ return parse_number(item,value); }
 	if (*value=='[')				{ return parse_array(item,value); }
 	if (*value=='{')				{ return parse_object(item,value); }

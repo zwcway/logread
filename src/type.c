@@ -33,7 +33,12 @@ int isIpV4(char *ipAddress) {
 
 int guessType(char *str) {
     int numcnt = 0, poicnt = 0, len = 0;
-    int isNumber = 0, isInteger = 0, isJson = 0;
+    int isNumber = 0, isInteger = 0;
+    char firstchr, lastchr;
+
+    if (str == 0 || *str == '\0') return TYPE_NULL;
+
+    firstchr = *str;
 
     //遍历整个字符串
     while (*str != '\0') {
@@ -56,10 +61,20 @@ int guessType(char *str) {
         str++;
     }
 
+    lastchr = *(str - 1);
+
+    if ((firstchr == '{' && lastchr == '}') || (firstchr == '[' && lastchr == ']'))
+        return TYPE_JSON;
+
     if (poicnt > 1) isNumber = 0;
     if (poicnt > 0) isInteger = 0;
 
     if (numcnt == len) isInteger = 1;
 
-    return 0;
+    if (isInteger) return TYPE_LONG;
+    if (isNumber) return TYPE_DOUBLE;
+
+    if (isIpV4(str)) return TYPE_IP;
+
+    return TYPE_STRING;
 }

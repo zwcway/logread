@@ -1,11 +1,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <lstring.h>
 #include "stack.h"
 #include "format.h"
 #include "output.h"
 #include "type.h"
+#include "time.h"
 
 void field_free(Log_field *f) {
     Log_field *next;
@@ -86,7 +87,7 @@ int parse_app(Log *log, char *line) {
     char *steper = line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
     unsigned char stch = 0, inval = 0;
-    int keyLen = 0, valLen = 0;
+    int keyLen = 0, valLen = 0, valtype = TYPE_NULL, count = 0;
     Stack *stack;
     Log_field *field;
 
@@ -141,15 +142,25 @@ int parse_app(Log *log, char *line) {
                         valLen = end - start;
                         // 值
                         tmp = sub_str(start + 1, valLen - 1);
-                        if (tmp == NULL) {
-                            L_SET_TYPE(field, TYPE_NULL);
-                        } else if (isInteger(tmp)) {
-                            L_SET_TYPE(field, TYPE_LONG);
-                            field->val->vallong = atof(tmp);
-                        } else {
-                            L_SET_TYPE(field, TYPE_STRING);
-                            field->val->valstring = tmp;
+                        valtype = guessType(tmp);
+                        L_SET_TYPE(field, valtype);
+
+                        switch (valtype) {
+                            case TYPE_LONG:
+                                field->val->vallong = atol(tmp);
+                                break;
+                            case TYPE_DOUBLE:
+                                field->val->valdbl = atof(tmp);
+                                break;
+                            case TYPE_JSON:
+                                field->val->valjson = cJSON_Parse(tmp);
+                                break;
+                            case TYPE_IP:
+                            case TYPE_STRING:
+                                field->val->valstring = tmp;
+                                break;
                         }
+                        count ++;
 
                         if (!is_end(steper + 1) && has_op(steper + 1))
                             L_ADD_FIELD(field);
@@ -169,11 +180,13 @@ int parse_app(Log *log, char *line) {
     } while(*(++steper) != '\0');
 
     //结尾存在字符串
-    if (key) {
+    if (key && !is_end(key)) {
         log->extra = sub_trim(key, steper - key);
     }
 
     STACK_FREE(stack);
+
+    return count;
 }
 
 
@@ -192,6 +205,7 @@ int format_app(const char *log_line) {
     int colcnt = 0;
     char *log = (char *)log_line;
     char *stt1, *stt2, *tmp;
+    struct tm tm;
 
     L_INIT_LOG(app_log);
 
@@ -222,7 +236,10 @@ int format_app(const char *log_line) {
 
     // time
     app_log.time.str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    app_log.time.ts = 0;
+    if (0 != strptime(app_log.time.str, "%y-%m-%d %H:%M:%S", &tm))
+        app_log.time.ts = mktime(&tm);
+    else
+        app_log.time.ts = 0;
     colcnt++;
 
     app_log.logid = 0;
@@ -233,7 +250,7 @@ int format_app(const char *log_line) {
     // 跳过 ]
     log++;
 
-    parse_app(&app_log, log);
+    colcnt += parse_app(&app_log, log);
 
     print_log(&app_log);
 

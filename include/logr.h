@@ -1,7 +1,7 @@
 #ifndef LOGR_LOGR_H
 #define LOGR_LOGR_H
 
-#define VERSION "0.2.2"
+#define VERSION "0.3.1"
 #define PROGRAM "logr"
 /**
  * 单次读取一行的最大字符数

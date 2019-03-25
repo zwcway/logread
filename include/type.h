@@ -8,9 +8,20 @@
 #include <ctype.h>
 #include <arpa/inet.h>
 
+
+#define TYPE_STRING 1
+#define TYPE_LONG 2
+#define TYPE_DOUBLE 3
+#define TYPE_JSON 4
+#define TYPE_IP 5
+#define TYPE_NULL 9
+
+
 //int isNumber(char *str) { return isdigit(str); };
 
 int isInteger(char *str);
+int isJSON(char *str);
 int isIpV4(char *ipAddress);
+int guessType(char *str);
 
 #endif //LOGR_TYPE_H
