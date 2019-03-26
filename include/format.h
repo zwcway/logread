@@ -6,6 +6,7 @@
 #define LOGR_FORMAT_H
 
 #include <string.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 #include "cJSON.h"
 #include "type.h"
@@ -52,11 +53,10 @@ static char *cov_level_int(unsigned char level) {
 /**
  *
  */
-typedef union Log_value {
+typedef struct Log_value {
     double valdbl;
-    long vallong;
+    long long vallong;
     char *valstring;
-    cJSON *valjson;
 } Log_value;
 
 /**
@@ -65,35 +65,43 @@ typedef union Log_value {
 typedef struct Log_field {
     char *key;
     unsigned char type;
-    Log_value *val;
+    union {
+        Log_value *valstr;
+        cJSON *valjson;
+    } val;
     struct Log_field *next, *prev;
 } Log_field;
 
+typedef struct Log_time {
+    time_t ts;
+    char *str;
+} Log_time;
+typedef struct Log_host {
+    in_addr_t lip;
+    char *ip;
+} Log_host;
+typedef struct Log_level {
+    unsigned char lint;
+    char *lstr;
+} Log_level;
 /**
  * 日志
  */
 typedef struct Log {
-    struct level {
-        unsigned char lint;
-        char *lstr;
-    } level ;
-    struct host {
-        in_addr_t lip;
-        char *ip;
-    } host;
+    unsigned long pos;
+    Log_level *level;
+    Log_host *host;
     /** 生成时间 */
-    struct time {
-        time_t ts;
-        char *str;
-    } time;
+    Log_time *time;
     /** 调用文件 */
     char *file;
     /** 日志id */
-    long logid;
+    long long logid;
     /** 其他扩展字符串 */
     char *extra;
     /** 链表 */
     Log_field *value;
+    const char *line;
 } Log;
 
 #define L_VAL(log) ((Log)(log)).value
@@ -110,16 +118,14 @@ typedef struct Log {
 #define L_SET_JSON(field)       L_SET_TYPE(field, TYPE_JSON)
 
 #define L_INIT_LOG(log)   do { \
-log.level.lstr = 0; \
-log.level.lint = 0; \
-log.host.ip = 0; \
-log.host.lip = 0; \
-log.time.str = 0; \
-log.time.ts = 0; \
+log.level = 0; \
+log.host = 0; \
+log.time = 0; \
 log.file = 0; \
 log.logid = 0; \
 log.extra = 0; \
 log.value = 0; \
+log.pos = 0; \
 } while(0)
 
 #define L_INIT_FIELD(field)    do { \
@@ -127,11 +133,53 @@ field = (Log_field *)malloc(sizeof(Log_field)); \
 field->key = 0; \
 field->next = 0; \
 field->prev = 0; \
-field->val = (Log_value *)malloc(sizeof(Log_value)); \
-field->val->vallong = 0; \
-field->val->valstring = 0; \
-field->val->valjson = 0; \
+field->val.valstr = 0; \
 }while(0)
+
+#define L_INIT_VALUE(field)  do { \
+field->val.valstr = (Log_value *)malloc(sizeof(Log_value)); \
+field->val.valstr->vallong = 0; \
+field->val.valstr->valdbl = 0; \
+field->val.valstr->valstring = 0; \
+}while(0)
+
+#define L_INIT_HOST(log)  do { \
+log.host = (Log_host *)malloc(sizeof(Log_host)); \
+log.host->lip = 0; \
+log.host->ip = 0; \
+}while(0)
+
+#define L_INIT_TIME(log)  do { \
+log.time = (Log_time *)malloc(sizeof(Log_time)); \
+log.time->ts = 0; \
+log.time->str = 0; \
+}while(0)
+
+#define L_INIT_LEVEL(log)  do { \
+log.level = (Log_level *)malloc(sizeof(Log_level)); \
+log.level->lint = 0; \
+log.level->lstr = 0; \
+}while(0)
+
+#define LF_LONG(field, tmp) do { \
+L_INIT_VALUE(field); \
+field->val.valstr->vallong = atol(tmp); \
+field->val.valstr->valdbl = atof(tmp); \
+field->val.valstr->valstring = tmp; \
+}while(0)
+
+#define LF_DOUBLE(field, tmp) do { \
+L_INIT_VALUE(field); \
+field->val.valstr->vallong = atol(tmp); \
+field->val.valstr->valdbl = atof(tmp); \
+field->val.valstr->valstring = tmp; \
+}while(0)
+
+#define LF_STRING(field, tmp) do { \
+L_INIT_VALUE(field); \
+field->val.valstr->valstring = tmp; \
+}while(0)
+
 
 #define L_FIELD_SKEY(field, key)    do { \
 field->key = key; \
@@ -146,8 +194,40 @@ field = field->next; \
 }while(0)
 
 
-void format(const char *log);
-static char* sub_str_trim(const char *str, size_t len, unsigned char trim);
+void format(const char *log, const unsigned long count);
+
+static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
+    size_t reallen;
+    char *copy;
+    char *src = (char *)str;
+
+    if (len <= 0) return 0;
+
+    reallen = strlen(src);
+    if (reallen < len) {
+        len = reallen;
+    }
+
+    if (trim) {
+        while (*src == ' ') {
+            src++;
+            len--;
+        }
+        while (*(src + len - 1) == ' ' || *(src + len - 1) == '\n' || *(src + len - 1) == '\r') len--;
+    }
+
+    len++;
+
+    if (!(copy = (char *) malloc(len))) return 0;
+
+    if (*(src + len - 1) != '\0') len--;
+
+    memcpy(copy, src, len);
+
+    if (*(src + len) != '\0') *(copy + len) = '\0';
+
+    return copy;
+}
 
 #define sub_str(str, len)  sub_str_trim(str, len, 0)
 #define sub_trim(str, len)  sub_str_trim(str, len, 1)

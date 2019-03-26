@@ -19,6 +19,6 @@
 #define P_JSTR(val)  do { hl_jqot("\"");hl_jstr(val);hl_jqot("\"");} while(0)
 #define P_JDBL(val)  do { hl_jstr(val);} while(0)
 
-void print_log(const Log *log);
+int print_log(const Log *log);
 
 #endif //LOGR_OUTPUT_H

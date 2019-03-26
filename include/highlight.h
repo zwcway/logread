@@ -46,10 +46,10 @@
  */
 #define hl_level(key) hl_str(key)
 /**
- * json
+ * json NULL
  * @param key
  */
-#define hl_json(key) hl_str(key)
+#define hl_jnul(key) hl_str(key)
 
 /**
  * JSON 键名

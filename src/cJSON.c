@@ -316,9 +316,6 @@ static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p);
 static const char *parse_object(cJSON *item,const char *value);
 static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p);
 
-/* Utility to jump whitespace and cr/lf */
-static const char *skip(const char *in) {while (in && *in && (unsigned char)*in<=32) in++; return in;}
-
 /* Parse an object - create a new root, and populate. */
 cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated)
 {

@@ -1,12 +1,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <lstring.h>
+#include <string.h>
 #include "stack.h"
 #include "format.h"
 #include "output.h"
 #include "type.h"
 #include "time.h"
+#include "utils.h"
 
 void field_free(Log_field *f) {
     Log_field *next;
@@ -15,63 +16,40 @@ void field_free(Log_field *f) {
         next = f->next;
 
         free(f->key);
-        if (f->type == TYPE_STRING) free(f->val->valstring);
-        if (f->type == TYPE_JSON) cJSON_Delete(f->val->valjson);
-        free(f->val);
+        if (f->type == TYPE_JSON)
+            cJSON_Delete(f->val.valjson);
+        else if (f->val.valstr) {
+            if (f->val.valstr->valstring) free(f->val.valstr->valstring);
+            free(f->val.valstr);
+        }
         free(f);
         f = next;
     }
 }
 
+/**
+ * 销毁 log
+ * log初始化不是指针，因此不需要销毁log本身
+ * @param log
+ */
 void log_free(Log *log) {
 
-    if (log->level.lstr) free(log->level.lstr);
+    if (log->level) {
+        if (log->level->lstr) free(log->level->lstr);
+        free(log->level);
+    }
+    if (log->time) {
+        if (log->time->str) free(log->time->str);
+        free(log->time);
+    }
+    if (log->host) {
+        if (log->host->ip) free(log->host->ip);
+        free(log->host);
+    }
     if (log->file) free(log->file);
-    if (log->time.str) free(log->time.str);
     if (log->extra) free(log->extra);
-    if (log->host.ip) free(log->host.ip);
 
     if (log->value) field_free(log->value);
-}
-
-static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
-    size_t reallen;
-    char *copy;
-    char *src = (char *)str;
-
-    if (len <= 0) return 0;
-
-    reallen = strlen(src);
-    if (reallen < len) {
-        len = reallen;
-    }
-
-    if (trim) {
-        while (*src == ' ') {
-            src++;
-            len--;
-        }
-        while (*(src + len - 1) == ' ' || *(src + len - 1) == '\n' || *(src + len - 1) == '\r') len--;
-    }
-
-    len++;
-
-    if (!(copy = (char *) malloc(len))) return 0;
-
-    if (*(src + len - 1) != '\0') len--;
-
-    memcpy(copy, src, len);
-
-    if (*(src + len) != '\0') *(copy + len) = '\0';
-
-    return copy;
-}
-
-int is_end(char *line) {
-    if (*line == '\0') return 1;
-    if (*line == '\n') return 1;
-    if (*line == '\r') return 1;
-    return 0;
 }
 
 int has_op(char *line) {
@@ -83,8 +61,38 @@ int has_op(char *line) {
     return 0;
 }
 
-int parse_app(Log *log, char *line) {
-    char *steper = line;
+void parse_field(Log_field *field, char *tmp) {
+    int valtype = guessType(tmp);
+    L_SET_TYPE(field, valtype);
+
+    switch (valtype) {
+        case TYPE_LONG:
+            LF_LONG(field, tmp);
+            break;
+        case TYPE_DOUBLE:
+            LF_DOUBLE(field, tmp);
+            break;
+        case TYPE_JSON:
+            field->val.valjson = cJSON_Parse(tmp);
+            if (field->val.valjson == 0) {
+                L_SET_TYPE(field, TYPE_STRING);
+                LF_STRING(field, tmp);
+            }
+            break;
+        case TYPE_IP:
+            LF_STRING(field, tmp);
+            break;
+        case TYPE_STRING:
+            LF_STRING(field, tmp);
+            break;
+        default:
+            free(tmp);
+            break;
+    }
+}
+
+int parse_app(Log *log, const char *line) {
+    char *steper = (char *)line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
     unsigned char stch = 0, inval = 0;
     int keyLen = 0, valLen = 0, valtype = TYPE_NULL, count = 0;
@@ -98,6 +106,7 @@ int parse_app(Log *log, char *line) {
 
     L_INIT_FIELD(field);
     log->value = field;
+    log->line = line;
 
     key = steper;
 
@@ -142,24 +151,7 @@ int parse_app(Log *log, char *line) {
                         valLen = end - start;
                         // 值
                         tmp = sub_str(start + 1, valLen - 1);
-                        valtype = guessType(tmp);
-                        L_SET_TYPE(field, valtype);
-
-                        switch (valtype) {
-                            case TYPE_LONG:
-                                field->val->vallong = atol(tmp);
-                                break;
-                            case TYPE_DOUBLE:
-                                field->val->valdbl = atof(tmp);
-                                break;
-                            case TYPE_JSON:
-                                field->val->valjson = cJSON_Parse(tmp);
-                                break;
-                            case TYPE_IP:
-                            case TYPE_STRING:
-                                field->val->valstring = tmp;
-                                break;
-                        }
+                        parse_field(field, tmp);
                         count ++;
 
                         if (!is_end(steper + 1) && has_op(steper + 1))
@@ -190,7 +182,7 @@ int parse_app(Log *log, char *line) {
 }
 
 
-int format_ral(const char *log_line) {
+int format_ral(const char *log_line, const unsigned long count) {
     return 0;
 }
 
@@ -200,7 +192,7 @@ int format_ral(const char *log_line) {
  * @param log_line
  * @return
  */
-int format_app(const char *log_line) {
+int format_app(const char *log_line, const unsigned long count) {
     Log app_log;
     int colcnt = 0;
     char *log = (char *)log_line;
@@ -209,13 +201,16 @@ int format_app(const char *log_line) {
 
     L_INIT_LOG(app_log);
 
+    app_log.pos = count;
+
     // level
     stt1 = strstr(log, ":");
     tmp = sub_str(log, stt1 - log);
 
     if (isIpV4(tmp)) {
-        app_log.host.ip = tmp;
-        app_log.host.lip = 0;
+        L_INIT_HOST(app_log);
+        app_log.host->ip = tmp;
+        app_log.host->lip = 0;
         colcnt++;
 
         log = ++stt1;
@@ -223,8 +218,9 @@ int format_app(const char *log_line) {
         stt1 = strstr(log, ":");
         tmp = sub_trim(log, stt1 - log);
     }
-    app_log.level.lstr = tmp;
-    app_log.level.lint = cov_level_str(tmp);
+    L_INIT_LEVEL(app_log);
+    app_log.level->lstr = tmp;
+    app_log.level->lint = cov_level_str(tmp);
     tmp = 0;
     colcnt++;
 
@@ -235,11 +231,12 @@ int format_app(const char *log_line) {
     colcnt++;
 
     // time
-    app_log.time.str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    if (0 != strptime(app_log.time.str, "%y-%m-%d %H:%M:%S", &tm))
-        app_log.time.ts = mktime(&tm);
+    L_INIT_TIME(app_log);
+    app_log.time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    if (0 != strptime(app_log.time->str, "%y-%m-%d %H:%M:%S", &tm))
+        app_log.time->ts = mktime(&tm);
     else
-        app_log.time.ts = 0;
+        app_log.time->ts = 0;
     colcnt++;
 
     app_log.logid = 0;
@@ -259,7 +256,7 @@ int format_app(const char *log_line) {
     return colcnt;
 }
 
-void format(const char *log) {
+void format(const char *log, const unsigned long count) {
 
     char tag[38];
     int colCnt = 0;
@@ -278,9 +275,9 @@ void format(const char *log) {
     }
 
     if (strstr(tag, ":  ral-worker *"))
-        colCnt = format_ral(log);
+        colCnt = format_ral(log, count);
     else
-        colCnt = format_app(log);
+        colCnt = format_app(log, count);
 
     if (!colCnt)
         printf("%s", log);

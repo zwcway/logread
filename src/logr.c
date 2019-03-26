@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <lstring.h>
+#include <string.h>
 
 #include "logr.h"
+#include "filter.h"
 #include "format.h"
 
 
@@ -28,14 +29,20 @@ void PrintHelp(char *prog) {
     printf("	                     extra(其他)       : %s\n", COL_EXTRA);
     printf("\n");
     printf("  -f, --filter         过滤日志。多个条件使用逗号分隔。格式如下：\n");
-    printf("                         key=val   指定字段中，任意位置模糊查找【待】\n");
-    printf("                         key~val   指定字段中，正则查找【待】\n");
-    printf("                         key>val   指定字段中，数值大于val【待】\n");
-    printf("                         key<val   指定字段中，数值小于val【待】\n");
-    printf("                         key>=val  指定字段中，数值大于等于val【待】\n");
-    printf("                         key<=val  指定字段中，数值小于等于val【待】\n");
-    printf("                         =val      任意位置模糊查找【待】\n");
-    printf("                         ~val      正则查找【待】\n");
+    printf("                         key*val   指定字段中，任意位置模糊查找\n");
+    printf("                         key!*val  (取反)指定字段中，任意位置模糊查找\n");
+    printf("                         key~val   指定字段中，正则查找\n");
+    printf("                         key!~val  (取反)指定字段中，正则查找\n");
+    printf("                         key>val   指定字段中，数值大于val\n");
+    printf("                         key<val   指定字段中，数值小于val\n");
+    printf("                         key>=val  指定字段中，数值大于等于val\n");
+    printf("                         key<=val  指定字段中，数值小于等于val\n");
+    printf("                         key!=val  (取反)指定字段中，数值不等于val\n");
+    printf("                         key<>val  (取反)指定字段中，数值不等于val\n");
+    printf("                         *val      任意字段模糊查找\n");
+    printf("                         !*val     (取反)任意位置模糊查找\n");
+    printf("                         ~val      正则查找\n");
+    printf("                         !~val     (取反)正则查找\n");
     printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000,uri~^bizas'\n");
@@ -76,7 +83,7 @@ int ParseArg(int argc, char *argv[]) {
                 printf("%c => %s \n", c, optarg);
                 break;
             case 'f':
-                printf("%c => %s \n", c, optarg);
+                collect_filter(optarg);
                 break;
             case 'v':
                 verflg = 1;
@@ -126,23 +133,26 @@ int ParseArg(int argc, char *argv[]) {
         ReadLine();
     else
         ReadPipe();
+
+    filter_free(fts);
 }
 
 /**
  * 从文件中读取日志
  */
 void ReadLine() {
-    char linebuf[MAX_LINE];
+    char linebuf[MAX_LINE + 1];
     int nullCnt = 0;
     int i = 0, openedCnt = 0;
+    unsigned long line = 0;
 
     do {
         openedCnt = 0;
         for (i = 0; i < MAX_LOGFILE; i++) {
             if (NULL != logfileList[i]) {
                 openedCnt++;
-                if (fgets(linebuf, MAX_LINE - 1, logfileList[i])) {
-                    format(linebuf);
+                if (fgets(linebuf, MAX_LINE, logfileList[i])) {
+                    format(linebuf, ++line);
                 } else {
                     fclose(logfileList[i]);
                     logfileList[i] = NULL;
@@ -158,9 +168,10 @@ void ReadLine() {
  */
 void ReadPipe() {
     char buftrans_in[MAX_LINE + 1];
+    unsigned long count = 0;
 
     while (fgets(buftrans_in , MAX_LINE , stdin))
-        format(buftrans_in);
+        format(buftrans_in, ++count);
 }
 
 

@@ -19,9 +19,9 @@
 
 //int isNumber(char *str) { return isdigit(str); };
 
-int isInteger(char *str);
-int isJSON(char *str);
-int isIpV4(char *ipAddress);
-int guessType(char *str);
+int isInteger(const char *str);
+int isJSON(const char *str);
+int isIpV4(const char *ipAddress);
+int guessType(const char *str);
 
 #endif //LOGR_TYPE_H

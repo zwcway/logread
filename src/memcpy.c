@@ -2,7 +2,7 @@
 // Created by Administrator on 2019/3/22.
 //
 
-#include <lstring.h>
+#include <string.h>
 #include "glibcVersion.h"
 
 void *__memcpy_old(void *, const void *, size_t);

@@ -62,6 +62,8 @@ typedef struct cJSON_Hooks {
 /* Supply malloc, realloc and free functions to cJSON */
 extern void cJSON_InitHooks(cJSON_Hooks* hooks);
 
+/* Utility to jump whitespace and cr/lf */
+static const char *skip(const char *in) {while (in && *in && (unsigned char)*in<=32) in++; return in;}
 
 /* Supply a block of JSON, and this returns a cJSON object you can interrogate. Call cJSON_Delete when finished. */
 extern cJSON *cJSON_Parse(const char *value);
