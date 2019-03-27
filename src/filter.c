@@ -11,6 +11,19 @@
 Filter_list *fts;
 Filter_list *fts_cur;
 
+
+void f_free(Filter *f) {
+    if (f) {
+        if (f->reg) {
+            regfree(f->reg);
+            free(f->reg);
+        }
+        if (f->valstr) free(f->valstr);
+        if (f->key) free(f->key);
+        free(f);
+    }
+}
+
 void filter_free(Filter_list *filter) {
     Filter_list *next;
     Filter_list *cur = filter;
@@ -18,15 +31,7 @@ void filter_free(Filter_list *filter) {
     while (cur) {
         next = cur->next;
 
-        if (cur->filter) {
-            if (cur->filter->reg) {
-                regfree(cur->filter->reg);
-                free(cur->filter->reg);
-            }
-            if (cur->filter->valstr) free(cur->filter->valstr);
-            if (cur->filter->key) free(cur->filter->key);
-            free(cur->filter);
-        }
+        f_free(cur->filter);
         free(cur);
 
         cur = next;
@@ -112,7 +117,7 @@ int collect_filter(const char *f) {
     F_INIT(filter);
 
     if (!parse_filter(filter, skip(f))) {
-        filter_free(filter);
+        f_free(filter);
         return 0;
     }
 

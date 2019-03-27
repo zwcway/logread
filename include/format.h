@@ -205,7 +205,7 @@ void format(const char *log, const unsigned long count);
  * @param trim 0保持原样；1删除空格
  * @return
  */
-static char* sub_str_trim(const char *str, size_t len, bool trim) {
+static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
     size_t reallen;
     char *copy;
     char *src = (char *)str;
