@@ -181,7 +181,6 @@ int parse_app(Log *log, const char *line) {
     return count;
 }
 
-
 int format_ral(const char *log_line, const unsigned long count) {
     return 0;
 }

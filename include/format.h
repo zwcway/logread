@@ -196,7 +196,16 @@ field = field->next; \
 
 void format(const char *log, const unsigned long count);
 
-static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
+/**
+ * 取子字符串，并支持删除两边空格
+ *
+ * TODO 使用 lstring，避免使用 memcpy
+ * @param str
+ * @param len
+ * @param trim 0保持原样；1删除空格
+ * @return
+ */
+static char* sub_str_trim(const char *str, size_t len, bool trim) {
     size_t reallen;
     char *copy;
     char *src = (char *)str;
