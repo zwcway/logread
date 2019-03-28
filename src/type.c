@@ -41,7 +41,8 @@ int isIpV4(const char *ipAddress) {
 int guessType(const char *str) {
     int numcnt = 0, poicnt = 0, len = 0;
     int isDouble = 1, isLong = 1;
-    char *firstchr, lastchr;
+    const char *firstchr;
+    char lastchr;
 
     if (str == 0 || *str == '\0') return TYPE_NULL;
 

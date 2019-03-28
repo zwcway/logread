@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include "lstring.h"
+#include "utils.h"
 #include "cJSON.h"
 #include "type.h"
 

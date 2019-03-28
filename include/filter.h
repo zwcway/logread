@@ -9,6 +9,7 @@
 #include <regex.h>
 #include "format.h"
 #include "logr.h"
+#include "lstring.h"
 
 /** 正则匹配 */
 #define F_OP_PG  1
@@ -39,6 +40,9 @@
 #define F_FAIL 0
 #define F_SUCC 1
 
+/**
+ * 过滤器结构体
+ */
 typedef struct Filter {
     char *key;
     unsigned char op;
@@ -48,17 +52,27 @@ typedef struct Filter {
     regex_t *reg;
 } Filter;
 
+/**
+ * 过滤器列表 —— 链表
+ */
 typedef struct Filter_list {
     struct Filter_list *next;
     Filter *filter;
 } Filter_list;
 
+/** 字符是否是操作符 */
 #define IS_OP(chr)  (chr=='>'||chr=='<'||'='==chr||'!'==chr||'*'==chr||'~'==chr)
+/** 操作符是否是数字类 */
 #define IS_NUMOP(op)  (F_OP_EQ==op||F_OP_LT==op||F_OP_LE==op|| F_OP_GT==op||F_OP_GE==op||F_OP_NEQ==op)
+/** 操作符是否是字符串类 */
 #define IS_STROP(op)  (F_OP_FZ==op||F_OP_PG==op||F_OP_NFZ==op||F_OP_NPG==op)
+/** 操作符是否是正则类 */
 #define IS_PEGOP(op)  (F_OP_PG==op||F_OP_NPG==op)
 
-
+/**
+ * 过滤器结构初始化 <br/>
+ * filter : Filter *
+ */
 #define F_INIT(filter) do { \
 filter = (Filter *)malloc(sizeof(Filter)); \
 filter->key = 0; \
@@ -69,12 +83,26 @@ filter->vallong = 0; \
 filter->reg = 0; \
 } while(0)
 
+/**
+ * 保存全局的过滤器列表
+ */
 extern Filter_list *fts;
+
+/**
+ * 仅用于正则
+ */
 regmatch_t pmatch[1];
 
 extern void filter_free(Filter_list *filter);
 extern int collect_filter(const char* f);
 
+/**
+ * 过滤整型数据
+ *
+ * @param filter
+ * @param lng
+ * @return
+ */
 static int filter_long(const Filter *filter, const long long lng) {
     switch (filter->op) {
         case F_OP_LT:
@@ -94,7 +122,13 @@ static int filter_long(const Filter *filter, const long long lng) {
     }
     return F_FAIL;
 }
-
+/**
+ * 过滤浮点型数据
+ *
+ * @param filter
+ * @param dbl
+ * @return
+ */
 static int filter_double(const Filter *filter, const double dbl) {
     switch (filter->op) {
         case F_OP_LT:
@@ -114,17 +148,50 @@ static int filter_double(const Filter *filter, const double dbl) {
     }
     return F_FAIL;
 }
-
-static int filter_string(const Filter *filter, const char *str) {
+/**
+ * 过滤字符串型数据
+ * @param filter
+ * @param str
+ * @param hl 返回已匹配的字符串始末指针，可用于高亮
+ * @return
+ */
+static int filter_string(const Filter *filter, const char *str, String *hl) {
     if (str == 0) return F_FAIL;
 
+    int ret = F_FAIL;
+    const char *findstr = 0;
+
     switch (filter->op) {
-        case F_OP_PG: return regexec(filter->reg, str, 1, pmatch, 0) == REG_NOERROR;
-        case F_OP_FZ: return strstr(str, filter->valstr) != 0;
+        // 正则
+        case F_OP_PG:
+            ret = regexec(filter->reg, str, 1, pmatch, 0) == REG_NOERROR;
+
+            if (hl && ret) {
+                findstr = str + pmatch[0].rm_so;
+                hl->str = findstr;
+                hl->len = pmatch[0].rm_eo - pmatch[0].rm_so;
+            }
+
+            return ret;
+        // 模糊匹配
+        case F_OP_FZ:
+            findstr = strstr(str, filter->valstr);
+            ret = findstr != 0;
+
+            if (hl && ret) {
+                hl->str = findstr;
+                hl->len = strlen(filter->valstr);
+            }
+
+            return ret;
+        // 正则取反
         case F_OP_NPG: return regexec(filter->reg, str, 1, pmatch, 0) == REG_NOMATCH;
+        // 模糊取反
         case F_OP_NFZ: return strstr(str, filter->valstr) == 0;
+        // 仅判断键名是否存在
         case F_OP_KEY: return F_SUCC;
     }
+
     return F_FAIL;
 }
 
@@ -139,7 +206,7 @@ static int filter_time(const Filter *filter, const Log_time *time) {
 
     if (IS_NUMOP(filter->op)) return filter_long(filter, (long long)time->ts);
 
-    return filter_string(filter, time->str);
+    return filter_string(filter, time->str, 0);
 }
 static int filter_host(const Filter *filter, const Log_host *host) {
     if (!host) return F_FAIL;
@@ -165,7 +232,7 @@ static int filter_field(const Filter *filter, const Log_field *field) {
         if (field->type == TYPE_DOUBLE) return filter_double(filter, field->val.valstr->valdbl);
         else if(field->type == TYPE_LONG) return filter_long(filter, field->val.valstr->vallong);
     if (IS_STROP(filter->op))
-        return filter_string(filter, field->val.valstr->valstring);
+        return filter_string(filter, field->val.valstr->valstring, 0);
 
     return F_FAIL;
 }
@@ -207,7 +274,7 @@ static int filter_value(const Filter *filter, const Log *log) {
     if (log->level && filter_level(filter, log->level)) return F_SUCC;
     if (filter_long(filter, log->logid)) return F_SUCC;
     if (log->time && filter_time(filter, log->time)) return F_SUCC;
-    if (log->extra && filter_string(filter, log->extra)) return F_SUCC;
+    if (log->extra && filter_string(filter, log->extra, 0)) return F_SUCC;
 
     for(;field;field=field->next)
         if (filter_field(filter, field)) return F_SUCC;
@@ -242,7 +309,7 @@ static int filter_log(const Log *log) {
                 return F_FAIL;
             if (0 == strcasecmp(ff->key, COL_TIME) && !filter_time(ff, log->time))
                 return F_FAIL;
-            if (0 == strcasecmp(ff->key, COL_EXTRA) && !filter_string(ff, log->extra))
+            if (0 == strcasecmp(ff->key, COL_EXTRA) && !filter_string(ff, log->extra, 0))
                 return F_FAIL;
 
             for (;field;field=field->next)

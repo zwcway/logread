@@ -7,12 +7,14 @@
 
 #include "color.h"
 #include "format.h"
+#include "lstring.h"
 
 /**
  * 键名
  * @param key
  */
 #define hl_key(key) printf(C_CYAN"%s"C_NONE, key)
+#define HLSTR_KEY_P(strkey) STR_CPRINTF_P(strkey, C_CYAN)
 
 /**
  * 等号
