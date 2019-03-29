@@ -17,7 +17,6 @@
  * @return
  */
 int str_eq (const String *__s1, const String *__s2, const unsigned incase) {
-    if (!__s1 || !__s2) return 0;
     if (!__s1->str || !__s2->str) return 0;
     if (!__s1->len || !__s2->len) return 0;
     // 长度不同
@@ -25,8 +24,8 @@ int str_eq (const String *__s1, const String *__s2, const unsigned incase) {
     // 地址相同
     if (__s1->str == __s2->str) return 1;
 
-    int len1 = __s1->len;
-    int len2 = __s2->len;
+    size_t len1 = __s1->len;
+    size_t len2 = __s2->len;
 
     // 对比每一个字符
     if (incase) {

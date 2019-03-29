@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <regex.h>
 #include "lstring.h"
 #include "utils.h"
 #include "cJSON.h"
@@ -28,14 +29,7 @@
 #define LEVEL_STR_ERROR  "ERROR"
 #define LEVEL_STR_UNKNOWN  "UNKNOWN"
 
-static unsigned char cov_level_str(char *str) {
-    if (!strcmp(str, LEVEL_STR_DEBUG)) return LEVEL_DEBUG;
-    if (!strcmp(str, LEVEL_STR_TRACE)) return LEVEL_TRACE;
-    if (!strcmp(str, LEVEL_STR_NOTICE)) return LEVEL_NOTICE;
-    if (!strcmp(str, LEVEL_STR_WARNING)) return LEVEL_WARNING;
-    if (!strcmp(str, LEVEL_STR_ERROR)) return LEVEL_ERROR;
-    return LEVEL_UNKNOwN;
-}
+static unsigned char cov_level_str(char *str);
 
 static char *cov_level_int(unsigned char level) {
     switch (level) {
@@ -108,7 +102,7 @@ typedef struct Log {
 
 #define L_VAL(log) ((Log)(log)).value
 
-#define L_SET_LEVEL(log, l)   (log).level = (unsigned char)l
+#define L_SET_LEVEL(log, l)   (log).level = (unsigned char)(l)
 #define L_SET_WARNING(log)    L_SETLEVEL(log, LEVEL_WARNING)
 #define L_SET_ERROR(log)      L_SETLEVEL(log, LEVEL_ERROR)
 #define L_SET_NOTICE(log)     L_SETLEVEL(log, LEVEL_NOTICE)
@@ -120,47 +114,47 @@ typedef struct Log {
 #define L_SET_JSON(field)       L_SET_TYPE(field, TYPE_JSON)
 
 #define L_INIT_LOG(log)   do { \
-log.level = 0; \
-log.host = 0; \
-log.time = 0; \
-log.file = 0; \
-log.logid = 0; \
-log.extra = 0; \
-log.value = 0; \
-log.pos = 0; \
+(log)->level = 0; \
+(log)->host = 0; \
+(log)->time = 0; \
+(log)->file = 0; \
+(log)->logid = 0; \
+(log)->extra = 0; \
+(log)->value = 0; \
+(log)->pos = 0; \
 } while(0)
 
 #define L_INIT_FIELD(field)    do { \
-field = (Log_field *)malloc(sizeof(Log_field)); \
-field->key = 0; \
-field->next = 0; \
-field->prev = 0; \
-field->val.valstr = 0; \
+(field) = (Log_field *)malloc(sizeof(Log_field)); \
+(field)->key = 0; \
+(field)->next = 0; \
+(field)->prev = 0; \
+(field)->val.valstr = 0; \
 }while(0)
 
 #define L_INIT_VALUE(field)  do { \
-field->val.valstr = (Log_value *)malloc(sizeof(Log_value)); \
-field->val.valstr->vallong = 0; \
-field->val.valstr->valdbl = 0; \
-field->val.valstr->valstring = 0; \
+(field)->val.valstr = (Log_value *)malloc(sizeof(Log_value)); \
+(field)->val.valstr->vallong = 0; \
+(field)->val.valstr->valdbl = 0; \
+(field)->val.valstr->valstring = 0; \
 }while(0)
 
 #define L_INIT_HOST(log)  do { \
-log.host = (Log_host *)malloc(sizeof(Log_host)); \
-log.host->lip = 0; \
-log.host->ip = 0; \
+(log)->host = (Log_host *)malloc(sizeof(Log_host)); \
+(log)->host->lip = 0; \
+(log)->host->ip = 0; \
 }while(0)
 
 #define L_INIT_TIME(log)  do { \
-log.time = (Log_time *)malloc(sizeof(Log_time)); \
-log.time->ts = 0; \
-log.time->str = 0; \
+(log)->time = (Log_time *)malloc(sizeof(Log_time)); \
+(log)->time->ts = 0; \
+(log)->time->str = 0; \
 }while(0)
 
 #define L_INIT_LEVEL(log)  do { \
-log.level = (Log_level *)malloc(sizeof(Log_level)); \
-log.level->lint = 0; \
-log.level->lstr = 0; \
+(log)->level = (Log_level *)malloc(sizeof(Log_level)); \
+(log)->level->lint = 0; \
+(log)->level->lstr = 0; \
 }while(0)
 
 #define LF_LONG(field, tmp) do { \
@@ -195,8 +189,12 @@ add->prev = field; \
 field = field->next; \
 }while(0)
 
+extern regex_t *reg_ral, *reg_app;
 
-void format(const char *log, const unsigned long count);
+void format_init(void);
+void format_free(void);
+
+void format(const char *log, unsigned long);
 
 /**
  * 取子字符串，并支持删除两边空格

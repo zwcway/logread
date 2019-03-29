@@ -61,13 +61,13 @@ typedef struct Filter_list {
 } Filter_list;
 
 /** 字符是否是操作符 */
-#define IS_OP(chr)  (chr=='>'||chr=='<'||'='==chr||'!'==chr||'*'==chr||'~'==chr)
+#define IS_OP(chr)  ((chr)=='>'||(chr)=='<'||'='==(chr)||'!'==(chr)||'*'==(chr)||'~'==(chr))
 /** 操作符是否是数字类 */
-#define IS_NUMOP(op)  (F_OP_EQ==op||F_OP_LT==op||F_OP_LE==op|| F_OP_GT==op||F_OP_GE==op||F_OP_NEQ==op)
+#define IS_NUMOP(op)  (F_OP_EQ==(op)||F_OP_LT==(op)||F_OP_LE==(op)|| F_OP_GT==(op)||F_OP_GE==(op)||F_OP_NEQ==(op))
 /** 操作符是否是字符串类 */
-#define IS_STROP(op)  (F_OP_FZ==op||F_OP_PG==op||F_OP_NFZ==op||F_OP_NPG==op)
+#define IS_STROP(op)  (F_OP_FZ==(op)||F_OP_PG==(op)||F_OP_NFZ==(op)||F_OP_NPG==(op))
 /** 操作符是否是正则类 */
-#define IS_PEGOP(op)  (F_OP_PG==op||F_OP_NPG==op)
+#define IS_PEGOP(op)  (F_OP_PG==(op)||F_OP_NPG==(op))
 
 /**
  * 过滤器结构初始化 <br/>
@@ -119,6 +119,7 @@ static int filter_long(const Filter *filter, const long long lng) {
             return lng == filter->vallong;
         case F_OP_KEY:
             return F_SUCC;
+        default:break;
     }
     return F_FAIL;
 }
@@ -145,6 +146,7 @@ static int filter_double(const Filter *filter, const double dbl) {
             return dbl == filter->valdbl;
         case F_OP_KEY:
             return F_SUCC;
+        default:break;
     }
     return F_FAIL;
 }
@@ -169,7 +171,7 @@ static int filter_string(const Filter *filter, const char *str, String *hl) {
             if (hl && ret) {
                 findstr = str + pmatch[0].rm_so;
                 hl->str = findstr;
-                hl->len = pmatch[0].rm_eo - pmatch[0].rm_so;
+                hl->len = (size_t)(pmatch[0].rm_eo - pmatch[0].rm_so);
             }
 
             return ret;
@@ -190,6 +192,7 @@ static int filter_string(const Filter *filter, const char *str, String *hl) {
         case F_OP_NFZ: return strstr(str, filter->valstr) == 0;
         // 仅判断键名是否存在
         case F_OP_KEY: return F_SUCC;
+        default:break;
     }
 
     return F_FAIL;

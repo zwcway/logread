@@ -129,11 +129,15 @@ int ParseArg(int argc, char *argv[]) {
         }
         exit(1);
     }
+
+    format_init();
+
     if (i > optind)
         ReadLine();
     else
         ReadPipe();
 
+    format_free();
     filter_free(fts);
 }
 

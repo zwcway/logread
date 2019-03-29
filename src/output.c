@@ -49,6 +49,8 @@ void print_json(cJSON *json) {
                 print_json(json->child);
                 hl_jary("]");
                 break;
+            default:
+                break;
         }
 
         if (next) hl_jcma(",");
@@ -75,6 +77,7 @@ void print_field(const Log_field *field) {
         case TYPE_JSON:
             print_json(field->val.valjson);
             break;
+        default:break;
     }
 }
 

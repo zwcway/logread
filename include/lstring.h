@@ -10,7 +10,7 @@
 
 typedef struct String {
     const char *str;
-    int len;
+    size_t len;
 } String;
 
 #define STR_CPY(dest, src, len) do { \

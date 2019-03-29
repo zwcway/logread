@@ -2,12 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
 #include "stack.h"
 #include "format.h"
 #include "output.h"
 #include "type.h"
 #include "time.h"
 #include "utils.h"
+
+regex_t *reg_ral = 0, *reg_app = 0;
 
 void field_free(Log_field *f) {
     Log_field *next;
@@ -94,8 +97,9 @@ void parse_field(Log_field *field, char *tmp) {
 int parse_app(Log *log, const char *line) {
     char *steper = (char *)line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
-    unsigned char stch = 0, inval = 0;
-    int keyLen = 0, valLen = 0, valtype = TYPE_NULL, count = 0;
+    unsigned char stch = 0;
+    unsigned long keyLen = 0, valLen = 0;
+    int count = 0;
     Stack *stack;
     Log_field *field;
 
@@ -132,7 +136,6 @@ int parse_app(Log *log, const char *line) {
 
                 if (STACK_IS_EMPTY(stack)) {
                     start = steper;
-                    inval = 1;
                 }
 
                 PUSH(stack, *steper);
@@ -145,7 +148,6 @@ int parse_app(Log *log, const char *line) {
 
                 if (STACK_IS_EMPTY(stack)) {
                     // 栈结束，表示一个完整的键值遍历完成
-                    inval = 0;
                     end = steper;
                     if (start) {
                         valLen = end - start;
@@ -157,10 +159,9 @@ int parse_app(Log *log, const char *line) {
                         if (!is_end(steper + 1) && has_op(steper + 1))
                             L_ADD_FIELD(field);
 
-                        valLen = 0;
                     }
 
-                    start = end = tmp = 0;
+                    start = 0;
                 }
                 break;
             default:
@@ -181,7 +182,7 @@ int parse_app(Log *log, const char *line) {
     return count;
 }
 
-int format_ral(const char *log_line, const unsigned long count) {
+int format_ral(Log *ral_log, const char *log_line, const unsigned long lineno) {
     return 0;
 }
 
@@ -191,16 +192,13 @@ int format_ral(const char *log_line, const unsigned long count) {
  * @param log_line
  * @return
  */
-int format_app(const char *log_line, const unsigned long count) {
-    Log app_log;
+int format_app(Log *app_log, const char *log_line, const unsigned long lineno) {
     int colcnt = 0;
     char *log = (char *)log_line;
     char *stt1, *stt2, *tmp;
     struct tm tm;
 
-    L_INIT_LOG(app_log);
-
-    app_log.pos = count;
+    app_log->pos = lineno;
 
     // level
     stt1 = strstr(log, ":");
@@ -208,8 +206,8 @@ int format_app(const char *log_line, const unsigned long count) {
 
     if (isIpV4(tmp)) {
         L_INIT_HOST(app_log);
-        app_log.host->ip = tmp;
-        app_log.host->lip = 0;
+        app_log->host->ip = tmp;
+        app_log->host->lip = 0;
         colcnt++;
 
         log = ++stt1;
@@ -218,66 +216,125 @@ int format_app(const char *log_line, const unsigned long count) {
         tmp = sub_trim(log, stt1 - log);
     }
     L_INIT_LEVEL(app_log);
-    app_log.level->lstr = tmp;
-    app_log.level->lint = cov_level_str(tmp);
-    tmp = 0;
+    app_log->level->lstr = tmp;
+    app_log->level->lint = cov_level_str(tmp);
     colcnt++;
 
     // file
     stt2 = strstr(stt1, "[");
     log = strstr(stt2, "]");
-    app_log.file = sub_str(stt2 + 1, log - stt2 - 1);
+    app_log->file = sub_str(stt2 + 1, log - stt2 - 1);
     colcnt++;
 
     // time
     L_INIT_TIME(app_log);
-    app_log.time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    if (0 != strptime(app_log.time->str, "%y-%m-%d %H:%M:%S", &tm))
-        app_log.time->ts = mktime(&tm);
+    app_log->time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    if (0 != strftime(app_log->time->str, strlen(app_log->time->str), "%y-%m-%d %H:%M:%S", &tm))
+        app_log->time->ts = mktime(&tm);
     else
-        app_log.time->ts = 0;
+        app_log->time->ts = 0;
     colcnt++;
 
-    app_log.logid = 0;
+    app_log->logid = 0;
 
     // extra
-    app_log.extra = 0;
+    app_log->extra = 0;
 
     // 跳过 ]
     log++;
 
-    colcnt += parse_app(&app_log, log);
-
-    print_log(&app_log);
-
-    log_free(&app_log);
+    colcnt += parse_app(app_log, log);
 
     return colcnt;
 }
 
-void format(const char *log, const unsigned long count) {
+int format_normal(Log *log, const char *log_line, const unsigned long lineno) {
+    return 0;
+}
 
-    char tag[38];
+void format(const char *line, const unsigned long lineno) {
     int colCnt = 0;
+    Log log;
+    char tag[38];
+    regmatch_t pmatch[1];
 
-    strncpy(tag, log, 37);
+    int (*func)(Log*, const char*, const unsigned long) = 0;
 
-    if (!(
-            strcmp(tag, "TRACE: ") ||
-            strcmp(tag, "DEBUG: ") ||
-            strcmp(tag, "NOTICE:") ||
-            strcmp(tag, "WARNIN:")
-    )) {
+    if (reg_ral && reg_app) {
+        if (regexec(reg_ral, line, 1, pmatch, 0) == REG_NOERROR)
+            func = format_ral;
+        else if (regexec(reg_app, line, 1, pmatch, 0) == REG_NOERROR)
+            func = format_app;
+        else func = format_normal;
+    }
+    else {
+        strncpy(tag, line, 37);
 
-        printf("%s", log);
-        return;
+        if (
+                0 == strstr(tag, "TRACE: ") ||
+                0 == strstr(tag, "DEBUG: ") ||
+                0 == strstr(tag, "NOTICE:") ||
+                0 == strstr(tag, "WARNIN:")
+                ) {
+            func = format_normal;
+        } else if (strstr(tag, ":  ral-worker *")) {
+            func = format_ral;
+        } else {
+            func = format_app;
+        }
     }
 
-    if (strstr(tag, ":  ral-worker *"))
-        colCnt = format_ral(log, count);
-    else
-        colCnt = format_app(log, count);
+    L_INIT_LOG(&log);
 
-    if (!colCnt)
-        printf("%s", log);
+    colCnt = (*func)(&log, line, lineno);
+
+    if (!colCnt) {
+        printf("%s", line);
+    } else {
+        print_log(&log);
+    }
+
+    log_free(&log);
+}
+
+static unsigned char cov_level_str(char *str) {
+    if (!strcmp(str, LEVEL_STR_DEBUG)) return LEVEL_DEBUG;
+    if (!strcmp(str, LEVEL_STR_TRACE)) return LEVEL_TRACE;
+    if (!strcmp(str, LEVEL_STR_NOTICE)) return LEVEL_NOTICE;
+    if (!strcmp(str, LEVEL_STR_WARNING)) return LEVEL_WARNING;
+    if (!strcmp(str, LEVEL_STR_ERROR)) return LEVEL_ERROR;
+    return LEVEL_UNKNOwN;
+}
+
+void format_init(void) {
+    if (0 == reg_ral) {
+        reg_ral = (regex_t *)malloc(sizeof(regex_t));
+        if (regcomp(reg_ral,
+                    "^(([0-9]+\\.){3}[0-9]+: )?(NOTICE|WARNING|TRACE): [01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2}:  ral(-worker)? \\* [0-9]+ \\[([0-9a-zA-Z_/]+\\.cpp:[0-9]+)\\]",
+                    REG_EXTENDED)) {
+            regfree(reg_ral);
+            free(reg_ral);
+            reg_ral = 0;
+        }
+    }
+    if (0 == reg_app) {
+        reg_app = (regex_t *)malloc(sizeof(regex_t));
+        if (regcomp(reg_app,
+                    "^(([0-9]+\\.){3}[0-9]+: )?(NOTICE|WARNING|TRACE|DEBUG): [0-9]{2}-[01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} \\[([0-9a-zA-Z_/]+\\.php:[0-9]+)\\]",
+                    REG_EXTENDED)) {
+            regfree(reg_app);
+            free(reg_app);
+            reg_app = 0;
+        }
+    }
+}
+void format_free(void) {
+    if (reg_ral) {
+        regfree(reg_ral);
+        free(reg_ral);
+    }
+    if (reg_app) {
+        regfree(reg_app);
+        free(reg_app);
+    }
 }
