@@ -88,7 +88,7 @@ int parse_field(Log_field *field, char *tmp) {
             break;
         default:
             valtype = TYPE_NULL;
-            free(tmp);
+            if(tmp) free(tmp);
             break;
     }
     L_SET_TYPE(field, valtype); \

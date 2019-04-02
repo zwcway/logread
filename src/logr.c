@@ -34,14 +34,12 @@ void PrintHelp(char *prog) {
     printf("                         key<=val  指定字段中，数值小于等于val\n");
     printf("                         key!=val  (取反)指定字段中，数值不等于val\n");
     printf("                         key<>val  (取反)指定字段中，数值不等于val\n");
-    printf("                         >val      任意字段模糊查找\n");
-    printf("                         >=val     任意字段模糊查找\n");
-    printf("                         <val      任意字段模糊查找\n");
-    printf("                         <=val     任意字段模糊查找\n");
+    printf("                         >val      任意字段数值大于val\n");
+    printf("                         >=val     任意字段数值大于等于val\n");
+    printf("                         <val      任意字段数值小于val\n");
+    printf("                         <=val     任意字段数值小于等于val\n");
     printf("                         *val      任意字段模糊查找\n");
-    printf("                         !*val     (取反)任意位置模糊查找\n");
     printf("                         ~val      正则查找\n");
-    printf("                         !~val     (取反)正则查找\n");
     printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000' -f 'uri~^bizas'\n");
