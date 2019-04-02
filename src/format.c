@@ -27,11 +27,10 @@ void field_free(Log_field *f) {
         next = f->next;
 
         free(f->key);
-        if (f->type == TYPE_JSON)
-            cJSON_Delete(f->val.valjson);
-        else if (f->val.valstr) {
-            if (f->val.valstr->valstring) free(f->val.valstr->valstring);
-            free(f->val.valstr);
+        if (f->valjson) cJSON_Delete(f->valjson);
+        if (f->valstr) {
+            if (f->valstr->valstring) free(f->valstr->valstring);
+            free(f->valstr);
         }
         free(f);
         f = next;
@@ -74,11 +73,11 @@ int parse_field(Log_field *field, char *tmp) {
             LF_DOUBLE(field, tmp);
             break;
         case TYPE_JSON:
-            field->val.valjson = cJSON_Parse(tmp);
-            if (field->val.valjson == 0) {
+            field->valjson = cJSON_Parse(tmp);
+            if (field->valjson == 0) {
                 valtype = TYPE_STRING;
-                LF_STRING(field, tmp);
             }
+            LF_STRING(field, tmp);
             break;
         case TYPE_IP:
             valtype = TYPE_STRING;

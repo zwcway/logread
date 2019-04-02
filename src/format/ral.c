@@ -65,9 +65,9 @@ int parse_ral(Log *log, const char *line) {
                     tmp = sub_str(start + 1, valLen - 1);
                     valtype = parse_field(field, tmp);
                     if (valtype == TYPE_STRING) {
-                        tmp = strdecode(field->val.valstr->valstring);
-                        free(field->val.valstr->valstring);
-                        field->val.valstr->valstring = tmp;
+                        tmp = strdecode(field->valstr->valstring);
+                        free(field->valstr->valstring);
+                        field->valstr->valstring = tmp;
                     }
                     count ++;
 

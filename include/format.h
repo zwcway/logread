@@ -66,10 +66,8 @@ typedef struct Log_value {
 typedef struct Log_field {
     char *key;
     unsigned char type;
-    union {
-        Log_value *valstr;
-        cJSON *valjson;
-    } val;
+    Log_value *valstr;
+    cJSON *valjson;
     struct Log_field *next, *prev;
 } Log_field;
 
@@ -164,7 +162,7 @@ FORMATER_DESTORY_FUNCNAME(name) \
 }while(0)
 
 #define L_INIT_VALUE(field)  do { \
-(field)->val.valstr = (Log_value *)calloc(1, sizeof(Log_value)); \
+(field)->valstr = (Log_value *)calloc(1, sizeof(Log_value)); \
 }while(0)
 
 #define L_INIT_HOST(log)  do { \
@@ -182,22 +180,22 @@ FORMATER_DESTORY_FUNCNAME(name) \
 #define LF_LONG(field, tmp) do { \
 L_INIT_VALUE(field); \
 L_SET_TYPE(field, TYPE_LONG); \
-(field)->val.valstr->vallong = atol(tmp); \
-(field)->val.valstr->valdbl = atof(tmp); \
-(field)->val.valstr->valstring = (tmp); \
+(field)->valstr->vallong = atol(tmp); \
+(field)->valstr->valdbl = atof(tmp); \
+(field)->valstr->valstring = (tmp); \
 }while(0)
 
 #define LF_DOUBLE(field, tmp) do { \
 L_INIT_VALUE(field); \
 L_SET_TYPE(field, TYPE_DOUBLE); \
-(field)->val.valstr->valstring = (tmp); \
-(field)->val.valstr->vallong = atol(tmp); \
-(field)->val.valstr->valdbl = atof(tmp); \
+(field)->valstr->valstring = (tmp); \
+(field)->valstr->vallong = atol(tmp); \
+(field)->valstr->valdbl = atof(tmp); \
 }while(0)
 
 #define LF_STRING(field, tmp) do { \
 L_INIT_VALUE(field); \
-(field)->val.valstr->valstring = (tmp); \
+(field)->valstr->valstring = (tmp); \
 }while(0)
 
 

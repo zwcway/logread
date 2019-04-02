@@ -26,7 +26,7 @@ OPT_BRIEF=${OPT_BRIEF:-1}
 #	eq(=，符号的颜色)
 # *开头：指定字段名称的颜色，使用英文句号分割json路径名。逗号分隔字段值，指定字段值的颜色。
 #  		例如：*l,warning=93  表示当日志错误等级(t)为warning时，将整个字段置为亮黄色。
-LOGR_COLORS=${LOGR_COLORS:-'ky=96:vl=90:*l,=97:*l,WARNING=93:*l,FAULT=91:*time=36:*time.ps_invoke=94:*errno,=91:*errno,0=90'}
+LOGR_COLORS=${LOGR_COLORS:-'ky=96:vl=90:*l,=97:*l,WARNING=93:*l,FATAL=91:*time=36:*time.ps_invoke=94:*errno,=91:*errno,0=90'}
 
 
 HAS_SED=true

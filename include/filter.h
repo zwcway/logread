@@ -250,18 +250,20 @@ static int filter_level(const Filter *filter, const Log_level *level) {
 static int filter_field(const Filter *filter, const Log_field *field) {
     if (field == 0) return F_FAIL;
 
-    if (field->type == TYPE_JSON)
-        return filter_json(filter, field->val.valjson);
+    if (field->type == TYPE_JSON) {
+        if (filter->key) return filter_json(filter, field->valjson);
+        return filter_string(filter, field->valstr->valstring, 0);
+    }
 
     if (field->type == TYPE_NULL)
         if (filter->op == F_OP_KEY) return F_SUCC;
         else return F_FAIL;
 
     if (IS_NUMOP(filter->op))
-        if (field->type == TYPE_DOUBLE) return filter_double(filter, field->val.valstr->valdbl);
-        else if(field->type == TYPE_LONG) return filter_long(filter, field->val.valstr->vallong);
+        if (field->type == TYPE_DOUBLE) return filter_double(filter, field->valstr->valdbl);
+        else if(field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
     if (IS_STROP(filter->op))
-        return filter_string(filter, field->val.valstr->valstring, 0);
+        return filter_string(filter, field->valstr->valstring, 0);
 
     return F_FAIL;
 }

@@ -66,16 +66,16 @@ void print_field(const Log_field *field) {
     switch (field->type) {
         case TYPE_STRING:
         case TYPE_IP:
-            hl_str(field->val.valstr->valstring);
+            hl_str(field->valstr->valstring);
             break;
         case TYPE_LONG:
-            hl_long(field->val.valstr->vallong);
+            hl_long(field->valstr->vallong);
             break;
         case TYPE_DOUBLE:
-            hl_double(field->val.valstr->valdbl);
+            hl_double(field->valstr->valdbl);
             break;
         case TYPE_JSON:
-            print_json(field->val.valjson);
+            print_json(field->valjson);
             break;
         default:break;
     }
