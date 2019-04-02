@@ -16,7 +16,6 @@
 #define TYPE_IP 5
 #define TYPE_NULL 9
 
-
 //int isNumber(char *str) { return isdigit(str); };
 
 int isInteger(const char *str);

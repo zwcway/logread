@@ -29,7 +29,9 @@
 #define LEVEL_STR_ERROR  "ERROR"
 #define LEVEL_STR_UNKNOWN  "UNKNOWN"
 
-static unsigned char cov_level_str(char *str);
+typedef struct _formater Formater;
+
+extern unsigned char cov_level_str(char *str);
 
 static char *cov_level_int(unsigned char level) {
     switch (level) {
@@ -45,6 +47,7 @@ static char *cov_level_int(unsigned char level) {
 #define OP_OPEN '['
 #define OP_CLOSE ']'
 #define OP_SPER  ' '
+#define OP_EQUAL  '='
 
 /**
  *
@@ -100,6 +103,36 @@ typedef struct Log {
     const char *line;
 } Log;
 
+#define FORMATER_PROC_ARGS          Log *log, const char *log_line, unsigned long lineno
+#define FORMATER_INIT_ARGS void
+
+#define FORMATER_FAILED -1
+#define FORMATER_SUCCESS 0
+
+typedef int (*FmtProcFunc)(FORMATER_PROC_ARGS);
+typedef void (*FmtInitFunc)(FORMATER_INIT_ARGS);
+typedef void (*FmtDestoryFunc)(FORMATER_INIT_ARGS);
+
+struct _formater {
+    FmtInitFunc initfunc;
+    FmtProcFunc procerfunc;
+    FmtDestoryFunc destoryFunc;
+};
+
+
+#define FORMATER_INIT_FUNCNAME(name)    init_##name
+#define FORMATER_PROC_FUNCNAME(name)    format_##name
+#define FORMATER_DESTORY_FUNCNAME(name)    destory_##name
+#define FORMATER_INIT_FUNC(name)        void FORMATER_INIT_FUNCNAME(name)(FORMATER_INIT_ARGS)
+#define FORMATER_DESTORY_FUNC(name)     void FORMATER_DESTORY_FUNCNAME(name)(FORMATER_INIT_ARGS)
+#define FORMATER_PROC_FUNC(name)        int FORMATER_PROC_FUNCNAME(name)(FORMATER_PROC_ARGS)
+
+#define ADD_FORMATER(name)              { \
+FORMATER_INIT_FUNCNAME(name), \
+FORMATER_PROC_FUNCNAME(name), \
+FORMATER_DESTORY_FUNCNAME(name) \
+}
+
 #define L_VAL(log) ((Log)(log)).value
 
 #define L_SET_LEVEL(log, l)   (log).level = (unsigned char)(l)
@@ -125,55 +158,45 @@ typedef struct Log {
 } while(0)
 
 #define L_INIT_FIELD(field)    do { \
-(field) = (Log_field *)malloc(sizeof(Log_field)); \
-(field)->key = 0; \
-(field)->next = 0; \
-(field)->prev = 0; \
-(field)->val.valstr = 0; \
+(field) = (Log_field *)calloc(1, sizeof(Log_field)); \
 }while(0)
 
 #define L_INIT_VALUE(field)  do { \
-(field)->val.valstr = (Log_value *)malloc(sizeof(Log_value)); \
-(field)->val.valstr->vallong = 0; \
-(field)->val.valstr->valdbl = 0; \
-(field)->val.valstr->valstring = 0; \
+(field)->val.valstr = (Log_value *)calloc(1, sizeof(Log_value)); \
 }while(0)
 
 #define L_INIT_HOST(log)  do { \
-(log)->host = (Log_host *)malloc(sizeof(Log_host)); \
-(log)->host->lip = 0; \
-(log)->host->ip = 0; \
+(log)->host = (Log_host *)calloc(1, sizeof(Log_host)); \
 }while(0)
 
 #define L_INIT_TIME(log)  do { \
-(log)->time = (Log_time *)malloc(sizeof(Log_time)); \
-(log)->time->ts = 0; \
-(log)->time->str = 0; \
+(log)->time = (Log_time *)calloc(1, sizeof(Log_time)); \
 }while(0)
 
 #define L_INIT_LEVEL(log)  do { \
-(log)->level = (Log_level *)malloc(sizeof(Log_level)); \
-(log)->level->lint = 0; \
-(log)->level->lstr = 0; \
+(log)->level = (Log_level *)calloc(1, sizeof(Log_level)); \
 }while(0)
 
 #define LF_LONG(field, tmp) do { \
 L_INIT_VALUE(field); \
-field->val.valstr->vallong = atol(tmp); \
-field->val.valstr->valdbl = atof(tmp); \
-field->val.valstr->valstring = tmp; \
+L_SET_TYPE(field, TYPE_LONG); \
+(field)->val.valstr->vallong = atol(tmp); \
+(field)->val.valstr->valdbl = atof(tmp); \
+(field)->val.valstr->valstring = (tmp); \
 }while(0)
 
 #define LF_DOUBLE(field, tmp) do { \
 L_INIT_VALUE(field); \
-field->val.valstr->vallong = atol(tmp); \
-field->val.valstr->valdbl = atof(tmp); \
-field->val.valstr->valstring = tmp; \
+L_SET_TYPE(field, TYPE_DOUBLE); \
+(field)->val.valstr->valstring = (tmp); \
+(field)->val.valstr->vallong = atol(tmp); \
+(field)->val.valstr->valdbl = atof(tmp); \
 }while(0)
 
 #define LF_STRING(field, tmp) do { \
 L_INIT_VALUE(field); \
-field->val.valstr->valstring = tmp; \
+L_SET_TYPE(field, TYPE_STRING); \
+(field)->val.valstr->valstring = (tmp); \
 }while(0)
 
 
@@ -184,17 +207,16 @@ field->key = key; \
 #define L_ADD_FIELD(field)    do { \
 Log_field *add; \
 L_INIT_FIELD(add); \
-field->next = add; \
-add->prev = field; \
-field = field->next; \
+(field)->next = add; \
+add->prev = (field); \
+(field) = (field)->next; \
 }while(0)
 
-extern regex_t *reg_ral, *reg_app;
-
+int parse_field(Log_field *field, char *tmp);
 void format_init(void);
 void format_free(void);
 
-void format(const char *log, unsigned long);
+void format(const char *, unsigned long);
 
 /**
  * 取子字符串，并支持删除两边空格

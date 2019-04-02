@@ -11,11 +11,6 @@
 
 static FILE* logfileList[MAX_LOGFILE];
 
-static char g_deviceid[32] = {0};
-
-static char g_serverIP[16] = "172.18.18.18";
-static int g_serverPort = 8888;
-
 void PrintHelp(char *prog) {
     printf("用法: %s [参数]... [文件]...\n", prog);
     printf("格式化日志。版本号：%s\n", VERSION);
@@ -139,6 +134,8 @@ int ParseArg(int argc, char *argv[]) {
 
     format_free();
     filter_free(fts);
+
+    return 1;
 }
 
 /**

@@ -80,7 +80,11 @@ void print_field(const Log_field *field) {
         default:break;
     }
 }
-
+/**
+ * TODO 输出json字符串
+ * @param log
+ * @return
+ */
 int print_log(const Log *log) {
     Log_field *field = log->value;
 

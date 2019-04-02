@@ -1,0 +1,6 @@
+NOTICE: 03-29 10:44:23:  ral * 36317 [conf/manager/cached.cpp:411][optime=1553827463.735714 msg=agent+is+alive agent_id=36543 autoreload_interval=10]
+NOTICE: 03-29 10:45:04:  ral * 55645 [ral.cpp:138][optime=1553827504.400149 conf_dir=/mnt/homework/conf/ral/ conf_file=ral.conf worker_file=ral-worker.conf passwd_file=ral-passwd.conf log_dir=/mnt/homework/log/ral/ ral_log_name=ral.log worker_log_name=ral-worker.log current_idc=test conf_type=1 log_level=NOTICE log_size=8192 log_file_size=2018 autoreload_interval=10 max_service_num=512 max_server_num=512 dumper_dir=/home/work/orp/data/ral/ msg=starting+ral ]
+NOTICE: 03-29 10:45:04:  ral * 55645 [mm/shmem_manager.cpp:42][optime=1553827504.400407 msg=create+share+memory sapi_mode=1 mem_key=2 addr=0x7f2ebb4be000 size=21090344]
+NOTICE: 03-29 10:45:04:  ral * 55645 [ral.cpp:169][optime=1553827504.530690 msg=ral+start+success
+NOTICE: 03-29 10:45:04:  ral * 55645 [php_ral.cpp:534][optime=1553827504.530722 msg=SIGRTMIN+signal+handler+installed pid=55645]
+NOTICE: 03-29 10:45:13:  ral * 36317 [conf/manager/cached.cpp:411][optime=1553827513.944545 msg=agent+is+alive agent_id=36543 autoreload_interval=10]

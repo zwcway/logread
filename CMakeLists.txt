@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.8)
 PROJECT(logr)
 
 SET(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 
 SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O2")
 SET(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,--wrap=memcpy")
@@ -15,19 +16,46 @@ IF (MSVC)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_COMPILER_FLAGS}")
 ENDIF ()
 
+ADD_DEFINITIONS(-D_GNU_SOURCE)
+
+# bion 语法分析
+#FIND_PACKAGE(BISON REQUIRED)
+#SET(BisonOutput ${CMAKE_CURRENT_BINARY_DIR}/bison.c)
+#IF(BISON_FOUND)
+#    BISON_TARGET(Parser src/parser/logr.y ${BisonOutput})
+#ENDIF()
+
+# flex 词法分析
+#FIND_PACKAGE(FLEX REQUIRED)
+#SET(FlexOutput ${CMAKE_CURRENT_BINARY_DIR}/flex.c)
+#IF(FLEX_FOUND)
+#    FLEX_TARGET(Scanner src/parser/logr.l  ${FlexOutput})
+##    ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
+#    ADD_EXECUTABLE(flex
+#            ${BISON_Parser_OUTPUTS}
+#            ${FLEX_Scanner_OUTPUTS}
+#            )
+#ENDIF()
+
 INCLUDE_DIRECTORIES(
         include/
 )
 
 AUX_SOURCE_DIRECTORY(src DIR_SRCS)
+AUX_SOURCE_DIRECTORY(src/format DIR_SRCS)
 AUX_SOURCE_DIRECTORY(include DIR_HEADERS)
+AUX_SOURCE_DIRECTORY(include/format DIR_HEADERS)
 
 SET(Sources
         ${DIR_HEADERS}
         ${DIR_SRCS}
         )
 
-ADD_EXECUTABLE(${PROJECT_NAME} ${Sources})
+ADD_EXECUTABLE(${PROJECT_NAME}
+        ${Sources}
+#        ${BISON_Parser_OUTPUTS}
+#        ${FLEX_Scanner_OUTPUTS}
+        )
 
 #SET_TARGET_PROPERTIES(${PROJECT_NAME}
 #        PROPERTIES
