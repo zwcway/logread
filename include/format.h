@@ -239,11 +239,11 @@ static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
     }
 
     if (trim) {
-        while (*src == ' ') {
+        while (len > 1 && *src == ' ') {
             src++;
             len--;
         }
-        while (*(src + len - 1) == ' ' || *(src + len - 1) == '\n' || *(src + len - 1) == '\r') len--;
+        while (len > 1 && (*(src + len - 1) == ' ' || *(src + len - 1) == '\n' || *(src + len - 1) == '\r')) len--;
     }
 
     len++;

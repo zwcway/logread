@@ -104,11 +104,12 @@ void format(const char *line, const unsigned long lineno) {
 
     for (int i = 0; i < formaterlen; ++i) {
         colCnt = formaters[i].procerfunc(&log, line, lineno);
+        // 处理成功后跳出循环
         if (colCnt != FORMATER_FAILED) break;
         log_free(&log);
     }
 
-    if (FORMATER_SUCCESS == colCnt) printf("%s", line);
+    if (FORMATER_FAILED == colCnt) printf("%s", line);
     else print_log(&log);
 
     log_free(&log);

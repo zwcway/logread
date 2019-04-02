@@ -104,7 +104,7 @@ int parse_app(Log *log, const char *line) {
                 }
                 break;
         }
-    } while(*(++steper) != '\0');
+    } while(!is_eof(++steper));
 
     //结尾存在字符串
     if (key && !is_end(key)) {
