@@ -23,7 +23,7 @@ void PrintHelp(char *prog) {
     printf("	                     logid(日志ID)     : %s\n", COL_LOGID);
     printf("	                     extra(其他)       : %s\n", COL_EXTRA);
     printf("\n");
-    printf("  -f, --filter         过滤日志。多个条件使用逗号分隔。格式如下：\n");
+    printf("  -f, --filter         过滤日志。格式如下：\n");
     printf("                         key*val   指定字段中，任意位置模糊查找\n");
     printf("                         key!*val  (取反)指定字段中，任意位置模糊查找\n");
     printf("                         key~val   指定字段中，正则查找\n");
@@ -40,7 +40,7 @@ void PrintHelp(char *prog) {
     printf("                         !~val     (取反)正则查找\n");
     printf("\n");
     printf("示例：\n");
-    printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000,uri~^bizas'\n");
+    printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000' -f 'uri~^bizas'\n");
     printf("tail -f ral-worker.log | logr -c t -c uri -f 'cost>1000' -f 'uri~^bizas'\n");
     printf("    表示仅显示日志时间和接口地址两列，并且只显示耗时大于1000，并且接口路径以bizas开始的日志\n");
 }
@@ -75,7 +75,7 @@ int ParseArg(int argc, char *argv[]) {
                 helpflg = 1;
                 break;
             case 'c':
-                printf("%c => %s \n", c, optarg);
+                collect_colmun(optarg);
                 break;
             case 'f':
                 collect_filter(optarg);
@@ -110,7 +110,7 @@ int ParseArg(int argc, char *argv[]) {
     int errCnt = 0;
     for (i = optind; i < argc; i++) {
         index = i - optind;
-        printf("file %d => %s\n", i, argv[i]);
+//        printf("file %d => %s\n", i, argv[i]);
         if (! (logfileList[index] = fopen(argv[i], "r"))) {
             printf("文件打开失败 %s\n", argv[i]);
             errCnt ++;
@@ -133,7 +133,7 @@ int ParseArg(int argc, char *argv[]) {
         ReadPipe();
 
     format_free();
-    filter_free(fts);
+    filter_free();
 
     return 1;
 }

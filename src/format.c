@@ -92,6 +92,7 @@ int parse_field(Log_field *field, char *tmp) {
             free(tmp);
             break;
     }
+    L_SET_TYPE(field, valtype); \
 
     return valtype;
 }

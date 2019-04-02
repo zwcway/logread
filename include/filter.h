@@ -36,8 +36,18 @@
 #define F_OP_KEY  98
 #define F_OP_VAL  99
 
+#define FC_NORMAL 0
+#define FC_LEFT 1
+#define FC_RIGHT 2
+#define FC_LR (FC_LEFT | FC_RIGHT)
 
+/**
+ * 过滤失败，允许输出
+ */
 #define F_FAIL 0
+/**
+ * 过滤成功，禁止输出
+ */
 #define F_SUCC 1
 
 /**
@@ -59,6 +69,12 @@ typedef struct Filter_list {
     struct Filter_list *next;
     Filter *filter;
 } Filter_list;
+
+typedef struct Column_list {
+    struct Column_list *next;
+    const char *column;
+    unsigned char type;
+} Column_list;
 
 /** 字符是否是操作符 */
 #define IS_OP(chr)  ((chr)=='>'||(chr)=='<'||'='==(chr)||'!'==(chr)||'*'==(chr)||'~'==(chr))
@@ -87,14 +103,24 @@ filter->reg = 0; \
  * 保存全局的过滤器列表
  */
 extern Filter_list *fts;
+/**
+ * 保存全局的过滤列列表
+ */
+extern Column_list *cts;
 
 /**
  * 仅用于正则
  */
 regmatch_t pmatch[1];
 
-extern void filter_free(Filter_list *filter);
-extern int collect_filter(const char* f);
+extern void filter_free();
+extern int collect_filter(const char*);
+extern int collect_colmun(const char*);
+
+extern int filter_column(const char *);
+
+
+#define IS_FC_FAIL(key) (F_FAIL == filter_column(key))
 
 /**
  * 过滤整型数据

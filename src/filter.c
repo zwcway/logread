@@ -8,8 +8,10 @@
 #include "format.h"
 #include "utils.h"
 
-Filter_list *fts;
-Filter_list *fts_cur;
+Filter_list *fts = 0;
+Filter_list *fts_cur = 0;
+Column_list *cts = 0;
+Column_list *cts_cur = 0;
 
 
 void f_free(Filter *f) {
@@ -24,17 +26,26 @@ void f_free(Filter *f) {
     }
 }
 
-void filter_free(Filter_list *filter) {
-    Filter_list *next;
-    Filter_list *cur = filter;
+void filter_free() {
+    Filter_list *fcur;
+    Column_list *ccur;
 
-    while (cur) {
-        next = cur->next;
+    while (fts) {
+        fcur = fts->next;
 
-        f_free(cur->filter);
-        free(cur);
+        if (fts->filter) f_free(fts->filter);
+        free(fts);
 
-        cur = next;
+        fts = fcur;
+    }
+
+    while (cts) {
+        ccur = cts->next;
+
+//        if (cts->column) free(cts->column);
+        free(cts);
+
+        cts = ccur;
     }
 }
 
@@ -123,13 +134,70 @@ int collect_filter(const char *f) {
 
     if (!fts_cur) {
         // 首次初始化
-        fts_cur = fts = malloc(sizeof(Filter_list));
+        fts_cur = fts = (Filter_list*)calloc(1, sizeof(Filter_list));
     } else {
-        fts_cur->next = malloc(sizeof(Filter_list));
+        fts_cur->next = (Filter_list*)calloc(1, sizeof(Filter_list));
         fts_cur = fts_cur->next;
     }
     fts_cur->next = 0;
     fts_cur->filter = filter;
 
     return 1;
+}
+
+void add_column(char *c, unsigned char type) {
+    if (!cts_cur)
+        cts_cur = cts = (Column_list*)calloc(1, sizeof(Column_list));
+    else {
+        cts_cur->next = (Column_list*)calloc(1, sizeof(Column_list));
+        cts_cur = cts_cur->next;
+    }
+    cts_cur->next = 0;
+    cts_cur->column = skip(c);
+    cts_cur->type = type;
+
+}
+
+int collect_colmun(const char *c) {
+    char *str = (char*)c;
+    char *col = strtok(str, ",");
+    size_t len = 0;
+    unsigned char type = FC_NORMAL;
+    while(col) {
+        if (col[0] == '*') {
+            type |= FC_RIGHT;
+            col++;
+        }
+        len = strlen(col) - 1;
+        if (col[len] == '*') {
+            type |= FC_LEFT;
+            col[len] = '\0';
+        }
+        add_column(col, type);
+        col = strtok(NULL, ",");
+    }
+    return 1;
+}
+
+int filter_column(const char *key) {
+    Column_list *cur = cts;
+
+    if (!key) return F_SUCC;
+
+    if (cts) {
+        for (; cur; cur = cur->next) {
+            if (cur->type == FC_RIGHT) {
+                if (striright(key, cur->column)) return F_FAIL;
+            } else if (cur->type == FC_LEFT) {
+                if (strileft(key, cur->column)) return F_FAIL;
+            } else if(cur->type == FC_LR) {
+                if (stristr(key, cur->column)) return F_FAIL;
+            } else if(cur->type == FC_NORMAL) {
+                if (0 == strcasecmp(key, cur->column)) return F_FAIL;
+            }
+        }
+        return F_SUCC;
+    }
+
+    return F_FAIL;
 }

@@ -47,6 +47,9 @@ int parse_app(Log *log, const char *line) {
 
     do {
         switch (*steper) {
+            case OP_DQOUTE:
+            case OP_QOUTE:
+                break;
             case OP_SPER:
                 // 跳过连续空格
                 while (*(steper + 1) == OP_SPER) steper++;
@@ -58,12 +61,12 @@ int parse_app(Log *log, const char *line) {
             case OP_OPEN:
                 if (key) {
                     keyLen = steper - key;
-                    field->key = sub_str(key, keyLen);
+                    field->key = sub_trim(key, keyLen);
                     key = 0;
                 }
 
                 // 重复时取最先的一个
-                if (*(steper - 1) == OP_OPEN) continue;
+//                if (*(steper - 1) == OP_OPEN) continue;
 
                 if (STACK_IS_EMPTY(stack)) {
                     start = steper;
@@ -73,7 +76,7 @@ int parse_app(Log *log, const char *line) {
                 break;
             case OP_CLOSE:
                 // 重复时取最后一个
-                while (*(steper + 1) == OP_CLOSE) steper++;
+//                while (*(steper + 1) == OP_CLOSE) steper++;
 
                 POP(stack, &stch);
 
@@ -91,7 +94,7 @@ int parse_app(Log *log, const char *line) {
                             L_ADD_FIELD(field);
 
                     }
-
+                    if(!key) key = steper + 1;
                     start = 0;
                 }
                 break;

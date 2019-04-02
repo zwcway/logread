@@ -47,6 +47,8 @@ static char *cov_level_int(unsigned char level) {
 #define OP_OPEN '['
 #define OP_CLOSE ']'
 #define OP_SPER  ' '
+#define OP_DQOUTE  '"'
+#define OP_QOUTE  '\''
 #define OP_EQUAL  '='
 
 /**
@@ -195,7 +197,6 @@ L_SET_TYPE(field, TYPE_DOUBLE); \
 
 #define LF_STRING(field, tmp) do { \
 L_INIT_VALUE(field); \
-L_SET_TYPE(field, TYPE_STRING); \
 (field)->val.valstr->valstring = (tmp); \
 }while(0)
 
