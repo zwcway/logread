@@ -9,6 +9,7 @@
 #include <format.h>
 #include "format/ral.h"
 #include "stack.h"
+#include "utils.h"
 
 regex_t *reg_ral = 0;
 regmatch_t __ral_pmatch[1];
@@ -23,11 +24,15 @@ int has_op(char *line) {
     return 0;
 }
 
-void strdecode(char *string) {
+char* strdecode(char *string) {
+    char *dest = (char*)malloc(strlen(string) + 1);
+    urldecode2(dest, string);
     while (!is_end(string)) {
         if (*string == '+') *string = ' ';
-        string++;
+        (*string)++;
     }
+
+    return dest;
 }
 
 int parse_ral(Log *log, const char *line) {
@@ -59,8 +64,11 @@ int parse_ral(Log *log, const char *line) {
                     // 值
                     tmp = sub_str(start + 1, valLen - 1);
                     valtype = parse_field(field, tmp);
-                    if (valtype == TYPE_STRING)
-                        strdecode(field->val.valstr->valstring);
+                    if (valtype == TYPE_STRING) {
+                        tmp = strdecode(field->val.valstr->valstring);
+                        free(field->val.valstr->valstring);
+                        field->val.valstr->valstring = tmp;
+                    }
                     count ++;
 
                     if (!is_end(steper + 1) && has_op(steper + 1)) {

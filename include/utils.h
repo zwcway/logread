@@ -9,4 +9,6 @@
 #define is_spc(strchr)  (*(strchr)==' ')
 #define is_spcs(strchr)  (*(strchr)==' '||*(strchr)=='\n'||*(strchr)=='\r')
 
+void urldecode2(char *, const char *);
+
 #endif //LOGR_UTILS_H
