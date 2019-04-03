@@ -6,19 +6,17 @@
 #define LOGR_OUTPUT_H
 
 #include "format.h"
-#include "highlight.h"
 
+#define OUTPUT_STRING 1
+#define OUTPUT_JSON 2
+#define OUTPUT_JSON_NOREC 3
 
 #define LOGR_OP "="
 #define LOGR_SPC " "
 
 
-#define P_STR(key, str)  do { hl_key(key); hl_op(LOGR_OP); hl_str(str); printf(LOGR_SPC); } while(0)
-#define P_LONG(key, integer)  do { hl_key(key); hl_op(LOGR_OP); hl_long(integer); printf(LOGR_SPC); } while(0)
-#define P_JKEY(key)  do { hl_jqot("\"");hl_jkey(key);hl_jqot("\"");hl_jclo(":"); } while(0)
-#define P_JSTR(val)  do { hl_jqot("\"");hl_jstr(val);hl_jqot("\"");} while(0)
-#define P_JDBL(val)  do { hl_jstr(val);} while(0)
+extern char outputstr[];
 
-int print_log(const Log *log);
+extern int print_log(const Log *log, int type);
 
 #endif //LOGR_OUTPUT_H

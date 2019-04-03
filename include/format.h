@@ -215,7 +215,7 @@ int parse_field(Log_field *field, char *tmp);
 void format_init(void);
 void format_free(void);
 
-void format(const char *, unsigned long);
+void format(const char *, unsigned long, int);
 
 /**
  * 取子字符串，并支持删除两边空格
@@ -239,11 +239,11 @@ static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
     }
 
     if (trim) {
-        while (len > 1 && *src == ' ') {
+        while (len >= 1 && is_spc(src)) {
             src++;
             len--;
         }
-        while (len > 1 && (*(src + len - 1) == ' ' || *(src + len - 1) == '\n' || *(src + len - 1) == '\r')) len--;
+        while (len >= 1 && is_spcs(src + len - 1)) len--;
     }
 
     len++;

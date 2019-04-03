@@ -27,10 +27,19 @@ void field_free(Log_field *f) {
         next = f->next;
 
         free(f->key);
-        if (f->valjson) cJSON_Delete(f->valjson);
+        f->key = 0;
+
+        if (f->valjson) {
+            cJSON_Delete(f->valjson);
+            f->valjson = 0;
+        }
         if (f->valstr) {
-            if (f->valstr->valstring) free(f->valstr->valstring);
+            if (f->valstr->valstring) {
+                free(f->valstr->valstring);
+                f->valstr->valstring = 0;
+            }
             free(f->valstr);
+            f->valstr = 0;
         }
         free(f);
         f = next;
@@ -96,7 +105,7 @@ int parse_field(Log_field *field, char *tmp) {
     return valtype;
 }
 
-void format(const char *line, const unsigned long lineno) {
+void format(const char *line, const unsigned long lineno, const int outputtype) {
     int colCnt = 0;
     Log log;
 
@@ -109,8 +118,10 @@ void format(const char *line, const unsigned long lineno) {
         log_free(&log);
     }
 
-    if (FORMATER_FAILED == colCnt) printf("%s", line);
-    else print_log(&log);
+    if (FORMATER_FAILED == colCnt)
+        printf("%s", line);
+    else
+        print_log(&log, outputtype);
 
     log_free(&log);
 }

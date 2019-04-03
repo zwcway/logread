@@ -120,6 +120,7 @@ extern int collect_colmun(const char*);
 extern int filter_column(const char *);
 
 
+#define IS_F_FAIL(log) (F_FAIL == filter_log(log))
 #define IS_FC_FAIL(key) (F_FAIL == filter_column(key))
 
 /**

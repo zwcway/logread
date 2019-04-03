@@ -46,6 +46,33 @@ static int cJSON_strcasecmp(const char *s1,const char *s2)
 static void *(*cJSON_malloc)(size_t sz) = malloc;
 static void (*cJSON_free)(void *ptr) = free;
 
+static char* cJSON_slashes(const char* str) {
+    size_t i = 0, j = 0, len = 0;
+    char *copy = NULL;
+    char c;
+
+    for (i = 0; str[i]; i++) {
+        c = str[i];
+        if(c == '\\')      len++;
+        else if(c == '"')  len++;
+        else if(c == '\'') len++;
+    }
+    len += i + 1;
+
+    if (!(copy = (char*)cJSON_malloc(len))) return 0;
+
+    for (i = 0; str[i]; i++) {
+        c = str[i];
+        if(c == '\'')       copy[j++] = '\\';
+        else if(c == '\\')  copy[j++] = c;
+        else if(c == '"')   copy[j++] = '\\';
+        copy[j++] = c;
+    }
+    copy[j] = '\0';
+
+    return copy;
+}
+
 static char* cJSON_strdup(const char* str)
 {
       size_t len;
@@ -691,7 +718,7 @@ cJSON *cJSON_CreateTrue(void)					{cJSON *item=cJSON_New_Item();if(item)item->ty
 cJSON *cJSON_CreateFalse(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_False;return item;}
 cJSON *cJSON_CreateBool(int b)					{cJSON *item=cJSON_New_Item();if(item)item->type=b?cJSON_True:cJSON_False;return item;}
 cJSON *cJSON_CreateNumber(double num)			{cJSON *item=cJSON_New_Item();if(item){item->type=cJSON_Number;item->valuedouble=num;item->valueint=(int)num;}return item;}
-cJSON *cJSON_CreateString(const char *string)	{cJSON *item=cJSON_New_Item();if(item){item->type=cJSON_String;item->valuestring=cJSON_strdup(string);}return item;}
+cJSON *cJSON_CreateString(const char *string)	{cJSON *item=cJSON_New_Item();if(item){item->type=cJSON_String;item->valuestring=cJSON_slashes(string);}return item;}
 cJSON *cJSON_CreateArray(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_Array;return item;}
 cJSON *cJSON_CreateObject(void)					{cJSON *item=cJSON_New_Item();if(item)item->type=cJSON_Object;return item;}
 

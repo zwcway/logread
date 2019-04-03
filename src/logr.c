@@ -7,6 +7,7 @@
 #include "logr.h"
 #include "filter.h"
 #include "format.h"
+#include "output.h"
 
 
 static FILE* logfileList[MAX_LOGFILE];
@@ -15,6 +16,9 @@ void PrintHelp(char *prog) {
     printf("用法: %s [参数]... [文件]...\n", prog);
     printf("格式化日志。版本号：%s\n", VERSION);
     printf("  -h, --help           显示帮助内容\n");
+    printf("\n");
+    printf("  -j, --json           输出JSON格式\n");
+    printf("  -J                   输出JSON格式，不处理类型为JSON的值\n");
     printf("\n");
     printf("  -c, --column         过滤列。多个列使用英文逗号分隔。内置列：\n");
     printf("	                     time (日志生成时间): %s\n", COL_TIME);
@@ -60,18 +64,19 @@ void PrintVersion(char *prog) {
  */
 int ParseArg(int argc, char *argv[]) {
     int c;
-    int helpflg = 0, verflg = 0, errflg = 0, debug = 0;
+    int helpflg = 0, verflg = 0, errflg = 0, debug = 0, outputtype = OUTPUT_STRING;
 
     struct option longopts[] =
             {
-                    {"column", 1, 0,        'c'},
-                    {"filter", 1, 0,        'f'},
-                    {"help",   0, &helpflg, 'h'},
-                    {"version",0, &verflg,  'v'},
+                    {"column", 1, 0,           'c'},
+                    {"filter", 1, 0,           'f'},
+                    {"help",   0, &helpflg,    'h'},
+                    {"json",   0, &outputtype, 'j'},
+                    {"version",0, &verflg,     'v'},
                     {0,        0, 0,        0}
             };
 
-    while ((c = getopt_long(argc, argv, "vhc:f:t:kcdD", longopts, NULL)) != EOF) {
+    while ((c = getopt_long(argc, argv, "jJvhc:f:t:kcdD", longopts, NULL)) != EOF) {
         switch (c) {
             case 'h':
                 helpflg = 1;
@@ -84,6 +89,12 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case 'v':
                 verflg = 1;
+                break;
+            case 'j':
+                outputtype = OUTPUT_JSON;
+                break;
+            case 'J':
+                outputtype = OUTPUT_JSON_NOREC;
                 break;
             case '?':
                 errflg++;
@@ -130,9 +141,9 @@ int ParseArg(int argc, char *argv[]) {
     format_init();
 
     if (i > optind)
-        ReadLine();
+        ReadLine(outputtype);
     else
-        ReadPipe();
+        ReadPipe(outputtype);
 
     format_free();
     filter_free();
@@ -143,7 +154,7 @@ int ParseArg(int argc, char *argv[]) {
 /**
  * 从文件中读取日志
  */
-void ReadLine() {
+void ReadLine(const int outputtype) {
     char linebuf[MAX_LINE + 1];
     int nullCnt = 0;
     int i = 0, openedCnt = 0;
@@ -155,7 +166,7 @@ void ReadLine() {
             if (NULL != logfileList[i]) {
                 openedCnt++;
                 if (fgets(linebuf, MAX_LINE, logfileList[i])) {
-                    format(linebuf, ++line);
+                    format(linebuf, ++line, outputtype);
                 } else {
                     fclose(logfileList[i]);
                     logfileList[i] = NULL;
@@ -169,12 +180,12 @@ void ReadLine() {
 /**
  * 从管道中读取日志
  */
-void ReadPipe() {
+void ReadPipe(const int outputtype) {
     char buftrans_in[MAX_LINE + 1];
     unsigned long count = 0;
 
     while (fgets(buftrans_in , MAX_LINE , stdin))
-        format(buftrans_in, ++count);
+        format(buftrans_in, ++count, outputtype);
 }
 
 
