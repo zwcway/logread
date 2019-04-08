@@ -5,6 +5,7 @@
 #include "output/string.h"
 #include "logr.h"
 #include "filter.h"
+#include "highlight.h"
 
 /**
  * 字符串缓存

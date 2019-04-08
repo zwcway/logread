@@ -8,25 +8,109 @@
 #include "utils.h"
 #include "c-ctype.h"
 
+
+static char *logr_op = "=";
+static char *logr_spc = " ";
+
+/* 内置的基础颜色值变量 */
+static char *field_key_color = C_CYAN;
+static char *field_val_color = C_L_GRAY;
+static char *background_color = C_NONE;
+static char *operator_color  = C_BROWN;
+static char *highlight_color  = C_RED;
+
+typedef struct color_cap {
+    char *name;
+    char **var;
+
+    void (*fct)(void);
+} color_cap;
+
+typedef struct colors_map {
+    char *name;
+    char *var;
+} colors_map;
+
+
+static colors_map colors_dict[MAX_COLORS];
+static int colors_dict_len;
+
+static char _strbuffer[MAX_BUFFER_SIZE];
+
+inline static const char* fetch_color(const char *__name, const char *__default) {
+    if (!color_option || NULL == __name) return 0;
+
+    // 优先使用配置颜色值
+    colors_map const *cllet;
+    for (cllet = colors_dict; cllet->name; cllet++) {
+        if (STREQ (cllet->name, __name))
+            return cllet->var;
+    }
+    return __default;
+}
+
+/**
+ * 支持自定义颜色输出日志
+ *
+ * @param __str
+ * @param __key
+ * @param __val
+ * @param print_space
+ */
+void sprtf_key_val (char **__str, const char *__key, const char *__val, const bool print_space) {
+    if (color_option) {
+        const char *color = NULL;
+
+        // 拼接全局的颜色处理
+        if (__val) {
+            snprintf(_strbuffer, MAX_BUFFER_SIZE, "%s%s%s", __key, ",", __val);
+            color = fetch_color(_strbuffer, 0);
+        }
+        if (NULL == color) {
+            snprintf(_strbuffer, MAX_BUFFER_SIZE, "%s%s", __key, ",");
+            color = fetch_color(_strbuffer, 0);
+        }
+
+        if (NULL != color)
+            SPRTF_STR_COLOR(__str, color, _strbuffer);
+        else {
+            if (field_key_color) SPRTF_STR_COLOR(__str, field_key_color, __key);
+            else SPRTF_STR(__str, __val);
+
+            if (operator_color) SPRTF_STR_COLOR(__str, operator_color, logr_op);
+            else SPRTF_STR(__str, logr_op);
+
+            if (__val) {
+                if (field_val_color) SPRTF_STR_COLOR(__str, field_val_color, __val);
+                else SPRTF_STR(__str, __val);
+            }
+        }
+    } else {
+        SPRTF_STR(__str, __key);
+        SPRTF_STR(__str, logr_op);
+        if (__val) SPRTF_STR(__str, __val);
+    }
+
+    if (print_space) SPRTF_STR(__str, logr_spc);
+}
+
 static void color_cap_mt_fct(void) {
 }
 
 /* LOGR_COLORS.  */
-static const color_cap _color_dict_map[] =
+static color_cap _color_dict_map[] =
         {
                 {HL_INTERNAL_KEY,           &field_key_color,      color_cap_mt_fct},
                 {HL_INTERNAL_VAL,           &field_val_color,      NULL},
                 {HL_INTERNAL_BACKGROUND,    &background_color,     NULL},
                 {HL_INTERNAL_OPERATOR,      &operator_color,       NULL},
+                {HL_INTERNAL_HIGHLIGHT,     &highlight_color,      NULL},
                 {NULL,                      NULL,                  NULL}
         };
 
+static char *env_buffer;
 void color_dict_free(void) {
-    colors_map *cllet;
-    for (cllet = colors_dict; cllet->name; cllet++) {
-        if (cllet->var) free(cllet->var);
-        if (cllet->name) free(cllet->name);
-    }
+    free(env_buffer);
 }
 
 
@@ -43,10 +127,10 @@ void color_dict_free(void) {
 */
 void parse_logr_colors (void) {
     const char *p;
-    char *q, c, *qpoint;
+    char *q, c;
     char *name;
     char *val;
-    color_cap const *cap;
+    color_cap *cap;
     colors_map *cllet;
 
     p = getenv ("LOGR_COLORS");
@@ -54,7 +138,7 @@ void parse_logr_colors (void) {
         return;
 
     /* 创建一个可以修改的副本，无需释放内存  */
-    qpoint = q = strdup (p);
+    env_buffer = q = strdup (p);
 
     name = q;
     val = NULL;
@@ -70,14 +154,18 @@ void parse_logr_colors (void) {
                 if (STREQ (cap->name, name))
                     break;
             /* 如果字段未找到，保存至全局变量 color_dict 中  */
-            if (cap->var && val)
-                *(cap->var) = (val);
+            if (cap->var && val) {
+                if (is_eof(val)) *(cap->var) = NULL;
+                else {
+                    *(cap->var) = val;
+                }
+            }
             if (cap->fct)
                 cap->fct();
             if (NULL == cap->name && colors_dict_len < MAX_COLORS) {
                 cllet = &colors_dict[colors_dict_len++];
-                cllet->name = strdup(name);
-                cllet->var = strdup(val);
+                cllet->name = (name);
+                cllet->var = (val);
             }
             if (c == '\0')
                 break;
@@ -95,6 +183,4 @@ void parse_logr_colors (void) {
         else
             break;
     }
-
-    free(qpoint);
 }

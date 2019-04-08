@@ -33,7 +33,7 @@ int print_log(const Log *log, int type) {
 
         if (0 < count) {
             *(__output - 1) = '\n';
-            *__output++ = '\r';
+//            *__output++ = '\r';
             *__output = '\0';
             fputs(outputstr, stdout);
             fflush(stdout);
