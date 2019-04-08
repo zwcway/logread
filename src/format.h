@@ -51,6 +51,13 @@ static char *cov_level_int(unsigned char level) {
 #define OP_QOUTE  '\''
 #define OP_EQUAL  '='
 
+typedef struct Highlight {
+    char *pre;
+    char *str;
+    char *app;
+} Highlight;
+
+
 /**
  *
  */
@@ -69,6 +76,7 @@ typedef struct Log_field {
     Log_value *valstr;
     cJSON *valjson;
     struct Log_field *next, *prev;
+    Highlight *hl;
 } Log_field;
 
 typedef struct Log_time {
@@ -261,7 +269,7 @@ static char* sub_str_trim(const char *str, size_t len, unsigned char trim) {
     return copy;
 }
 
-#define sub_str(str, len)  sub_str_trim(str, len, 0)
-#define sub_trim(str, len)  sub_str_trim(str, len, 1)
+#define sub_str(str, len)  sub_str_trim(str, (size_t)(len), 0)
+#define sub_trim(str, len)  sub_str_trim(str, (size_t)(len), 1)
 
 #endif //LOGR_FORMAT_H

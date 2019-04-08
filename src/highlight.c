@@ -94,6 +94,19 @@ void sprtf_key_val (char **__str, const char *__key, const char *__val, const bo
     if (print_space) SPRTF_STR(__str, logr_spc);
 }
 
+extern void sprtf_hl (const char *__buf, char **__str, int __len, const char *__key, Highlight *hl) {
+    if (color_option) {
+        if (highlight_color) {
+            if (hl->pre)
+                SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), field_val_color, hl->pre);
+            SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), highlight_color, hl->str);
+            SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), field_val_color, hl->app);
+            return;
+        }
+    }
+    SPRTF_STR(__str, __key);
+}
+
 static void color_cap_mt_fct(void) {
 }
 

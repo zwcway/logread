@@ -137,6 +137,13 @@ extern int collect_colmun(const char*, unsigned char);
 extern int filter_column(const Column_list *, const char *);
 extern int filter_column_callback(void*, const Log *, int , print_colmn_func);
 
+static void F_HL_P(Highlight **__hl, const char *__str, int __of, int __ln) {
+(*(__hl)) = (Highlight *)calloc(1, sizeof(Highlight));
+(*(__hl))->pre = sub_str(__str, __of);
+(*(__hl))->str = sub_str(__str + __of, __ln);
+(*(__hl))->app = sub_str(__str + __of + __ln, MAX_LINE);
+}
+
 /**
  * 过滤整型数据
  *
@@ -200,7 +207,7 @@ static int filter_double(const Filter *filter, const double dbl) {
  * @param hl 返回已匹配的字符串始末指针，可用于高亮
  * @return
  */
-static int filter_string(const Filter *filter, const char *str, String *hl) {
+static int filter_string(const Filter *filter, const char *str, Highlight **hl) {
     if (str == 0) return F_FAIL;
 
     int ret = F_FAIL;
@@ -211,11 +218,8 @@ static int filter_string(const Filter *filter, const char *str, String *hl) {
         case F_OP_PG:
             ret = regexec(filter->reg, str, 1, pmatch, 0) == REG_NOERROR;
 
-            if (hl && ret) {
-                findstr = str + pmatch[0].rm_so;
-                hl->str = findstr;
-                hl->len = (size_t)(pmatch[0].rm_eo - pmatch[0].rm_so);
-            }
+            if (color_option && hl && ret)
+                F_HL_P(hl, str, pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so);
 
             return ret;
         // 模糊匹配
@@ -223,10 +227,8 @@ static int filter_string(const Filter *filter, const char *str, String *hl) {
             findstr = strstr(str, filter->valstr);
             ret = findstr != 0;
 
-            if (hl && ret) {
-                hl->str = findstr;
-                hl->len = strlen(filter->valstr);
-            }
+            if (color_option && hl && ret)
+                F_HL_P(hl, str, findstr - str, strlen(filter->valstr));
 
             return ret;
         // 正则取反
@@ -334,12 +336,12 @@ static int filter_level(const Filter *filter, const Log_level *level) {
     return F_FAIL;
 }
 
-static int filter_field(const Filter *filter, const Log_field *field) {
+static int filter_field(const Filter *filter, Log_field *field) {
     if (field == 0) return F_FAIL;
 
     if (field->type == TYPE_JSON) {
-        if (filter->key) return filter_json(filter, field->valjson);
-        return filter_string(filter, field->valstr->valstring, 0);
+        if (filter->key && filter->op == F_OP_JSONKEY) return filter_json(filter, field->valjson);
+        return filter_string(filter, field->valstr->valstring, &field->hl);
     }
 
     if (field->type == TYPE_NULL) {
@@ -352,7 +354,7 @@ static int filter_field(const Filter *filter, const Log_field *field) {
         if (field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
     }
     if (IS_STROP(filter->op)) {
-        return filter_string(filter, field->valstr->valstring, 0);
+        return filter_string(filter, field->valstr->valstring, &field->hl);
     }
 
     return F_FAIL;
@@ -410,7 +412,6 @@ static int filter_value(const Filter *filter, const Log *log) {
 }
 
 /**
- * TODO 高亮已匹配的字符串
  *
  * @param log
  * @return 0 表示过滤成功；1 表示无需过滤

@@ -74,10 +74,18 @@ void print_str_field(char **__output, const Log_field *field) {
         case TYPE_DOUBLE:
         case TYPE_STRING:
         case TYPE_IP:
-            P_STR_BUF(&val, field->valstr->valstring);
+            if (field->hl) {
+                sprtf_hl(str_buffer, &val, MAX_LINE, field->valstr->valstring, field->hl);
+            } else {
+                P_STR_BUF(&val, field->valstr->valstring);
+            }
             break;
         case TYPE_JSON:
-            print_json_to_str(&val, field->valjson);
+            if (field->hl) {
+                sprtf_hl(str_buffer, &val, MAX_LINE, field->valstr->valstring, field->hl);
+            } else {
+                print_json_to_str(&val, field->valjson);
+            }
             break;
         default:break;
     }

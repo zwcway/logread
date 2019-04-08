@@ -39,6 +39,12 @@ void field_free(Log_field *f) {
             f->valstr = 0;
         }
 
+        if (f->hl) {
+            free(f->hl->pre);
+            free(f->hl->str);
+            free(f->hl->app);
+            free(f->hl);
+        }
         free(f->key);
         f->key = 0;
 
