@@ -5,6 +5,19 @@
 #include <ctype.h>
 #include <utils.h>
 #include <string.h>
+#include <stdarg.h>
+
+/* Return non-zero if we should highlight matches in output.  */
+int
+should_colorize (void)
+{
+    /* $TERM is not normally defined on DOS/Windows, so don't require
+       it for highlighting.  But some programs, like Emacs, do define
+       it when running Grep as a subprocess, so make sure they don't
+       set TERM=dumb.  */
+    char const *t = getenv ("TERM");
+    return ! (t && strcmp (t, "dumb") == 0);
+}
 
 void urldecode2(char *dst, const char *src) {
     char a, b;
@@ -127,4 +140,26 @@ char *stristr(const char *str1, const char *str2) {
     }
 
     return (NULL);
+}
+
+extern size_t concat(char * __restrict __str, ...) {
+    va_list ap;
+    size_t len = 0;
+    const char *temp;
+
+    va_start(ap, __str);
+    while ((temp = va_arg(ap, const char *)) != 0) len += strlen(temp);
+    va_end(ap);
+
+    if (len == 0) return 0;
+
+    len++;
+
+    if (!(__str = (char *)malloc(len))) return 0;
+
+    va_start(ap, __str);
+    while ((temp = va_arg(ap, const char *)) != 0) strcat(__str, temp);
+    va_end(ap);
+
+    return len;
 }

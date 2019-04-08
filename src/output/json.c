@@ -30,49 +30,52 @@ void print_json_field(cJSON *__json, const Log_field *field, const int _rec) {
     cJSON_AddItemToObject(__json, field->key, _item);
 }
 
-int print_log_json(cJSON *__json, const Log *log, const int _rec) {
+int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, const int _rec) {
+    cJSON *__json = (cJSON *)arg;
     int count = 0;
     Log_field *field = log->value;
     cJSON * _item;
 
-    if(log->host && log->host->ip && IS_FC_FAIL(COL_HOST)) {
+    if(log->host && log->host->ip && F_FAIL == filter_column(col, COL_HOST)) {
         _item = cJSON_CreateString(log->host->ip);
         cJSON_AddItemToObject(__json, COL_HOST, _item);
         count++;
     }
 
-    if(log->level && log->level->lstr && IS_FC_FAIL(COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_FAIL == filter_column(col, COL_LEVEL)) {
         _item = cJSON_CreateString(log->level->lstr);
         cJSON_AddItemToObject(__json, COL_LEVEL, _item);
         count++;
     }
 
-    if (IS_FC_FAIL(COL_LOGID)) {
+    if (F_FAIL == filter_column(col, COL_LOGID)) {
         _item = cJSON_CreateNumber((double)log->logid);
         cJSON_AddItemToObject(__json, COL_LOGID, _item);
         count++;
     }
 
-    if (log->file && IS_FC_FAIL(COL_FILE)) {
+    if (log->file && F_FAIL == filter_column(col, COL_FILE)) {
         _item = cJSON_CreateString(log->file);
         cJSON_AddItemToObject(__json, COL_FILE, _item);
         count++;
     }
-    if (log->time && log->time->str && IS_FC_FAIL(COL_TIME)) {
+    if (log->time && log->time->str && F_FAIL == filter_column(col, COL_TIME)) {
         _item = cJSON_CreateString(log->time->str);
         cJSON_AddItemToObject(__json, COL_TIME, _item);
         count++;
     }
 
-    while(field) {
-        if (IS_FC_FAIL(field->key)) {
+    for(; field; field = field->next) {
+        if (field->type == TYPE_JSON) {
+
+        }
+        else if (F_FAIL == filter_column(col, field->key)) {
             print_json_field(__json, field, _rec);
             count++;
         }
-        field = field->next;
     };
 
-    if (log->extra && IS_FC_FAIL(COL_EXTRA)) {
+    if (log->extra && F_FAIL == filter_column(col, COL_EXTRA)) {
         _item = cJSON_CreateString(log->extra);
         cJSON_AddItemToObject(__json, COL_EXTRA, _item);
         count++;
@@ -90,8 +93,11 @@ int print_log_json(cJSON *__json, const Log *log, const int _rec) {
  */
 int print_log_to_json(char **__str, const Log *log, const int _rec) {
     cJSON *__json = cJSON_CreateObject();
+    int opt = 0;
 
-    int count = print_log_json(__json, log, _rec);
+    if (_rec) opt |= FC_OPT_RECURSE;
+
+    int count = filter_column_callback(__json, log, opt, print_log_to_json_column);
 
     print_json_to_str(__str, __json);
 

@@ -14,13 +14,14 @@
 char outputstr[MAX_LINE];
 
 /**
- * TODO 输出json字符串
  * @param log
  * @return 已输出的字段数量
  */
 int print_log(const Log *log, int type) {
     char *__output = (char *)outputstr;
     int count = 0;
+
+    if (dev_null_output) return count;
 
     if (F_FAIL != filter_log(log)) {
         if (type == OUTPUT_STRING)
@@ -30,8 +31,13 @@ int print_log(const Log *log, int type) {
         else if (type == OUTPUT_JSON_NOREC)
             count = print_log_to_json(&__output, log, 0);
 
-        if (0 < count)
-            printf("%s\n", outputstr);
+        if (0 < count) {
+            *(__output - 1) = '\n';
+            *__output++ = '\r';
+            *__output = '\0';
+            fputs(outputstr, stdout);
+            fflush(stdout);
+        }
     }
 
     return count;

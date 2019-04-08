@@ -33,13 +33,26 @@
 /** 不等于 */
 #define F_OP_NEQ  57
 /** 是否存在KEY */
-#define F_OP_KEY  98
+#define F_OP_KEY  97
+#define F_OP_JSONKEY  98
 #define F_OP_VAL  99
 
 #define FC_NORMAL 0
 #define FC_LEFT 1
 #define FC_RIGHT 2
 #define FC_LR (FC_LEFT | FC_RIGHT)
+
+#define FC_OR 1
+#define FC_AND 2
+
+/**
+ * JSON输出标记 递归输出子JSON
+ */
+#define FC_OPT_RECURSE  0x2
+/**
+ * 通用标记 上一次列过滤匹配成功
+ */
+#define FC_OPT_LASTSUCC      0x1000
 
 /**
  * 过滤失败，允许输出
@@ -74,6 +87,8 @@ typedef struct Column_list {
     struct Column_list *next;
     const char *column;
     unsigned char type;
+    /** 与或 */
+    unsigned char cond;
 } Column_list;
 
 /** 字符是否是操作符 */
@@ -108,6 +123,8 @@ extern Filter_list *fts;
  */
 extern Column_list *cts;
 
+typedef int (*print_colmn_func)(void *, const Log *, const Column_list *, const int);
+
 /**
  * 仅用于正则
  */
@@ -115,13 +132,10 @@ regmatch_t pmatch[1];
 
 extern void filter_free();
 extern int collect_filter(const char*);
-extern int collect_colmun(const char*);
+extern int collect_colmun(const char*, unsigned char);
 
-extern int filter_column(const char *);
-
-
-#define IS_F_FAIL(log) (F_FAIL == filter_log(log))
-#define IS_FC_FAIL(key) (F_FAIL == filter_column(key))
+extern int filter_column(const Column_list *, const char *);
+extern int filter_column_callback(void*, const Log *, int , print_colmn_func);
 
 /**
  * 过滤整型数据
@@ -145,6 +159,7 @@ static int filter_long(const Filter *filter, const long long lng) {
         case F_OP_EQ:
             return lng == filter->vallong;
         case F_OP_KEY:
+        case F_OP_JSONKEY:
             return F_SUCC;
         default:break;
     }
@@ -172,6 +187,7 @@ static int filter_double(const Filter *filter, const double dbl) {
         case F_OP_EQ:
             return dbl == filter->valdbl;
         case F_OP_KEY:
+        case F_OP_JSONKEY:
             return F_SUCC;
         default:break;
     }
@@ -218,16 +234,86 @@ static int filter_string(const Filter *filter, const char *str, String *hl) {
         // 模糊取反
         case F_OP_NFZ: return strstr(str, filter->valstr) == 0;
         // 仅判断键名是否存在
-        case F_OP_KEY: return F_SUCC;
+        case F_OP_KEY:
+        case F_OP_JSONKEY:
+            return F_SUCC;
         default:break;
     }
 
     return F_FAIL;
 }
-
+/**
+ * 过滤json值
+ *
+ * @param filter
+ * @param json
+ * @return
+ */
 static int filter_json(const Filter *filter, const cJSON *json) {
     if (json == 0) return F_FAIL;
+    if (!filter->key) return F_FAIL;
+    if (!filter->valstr) return F_FAIL;
+    cJSON *item = (cJSON*)json;
 
+    // TODO 使用循环代替递归
+    for(; item; item = item->next) {
+        switch (item->type) {
+            case cJSON_Object:
+            case cJSON_Array:
+                if (item->child) {
+                    if (F_SUCC == filter_json(filter, item->child)) return F_SUCC;
+                }
+                break;
+            case cJSON_Number:
+                if (F_SUCC == filter_double(filter, item->valuedouble)) return F_SUCC;
+                break;
+            case cJSON_String:
+                if (F_SUCC == filter_string(filter, item->valuestring, 0)) return F_SUCC;
+                break;
+            case cJSON_False:
+            case cJSON_True:
+                if (F_SUCC == filter_long(filter, item->valueint)) return F_SUCC;
+                break;
+            case cJSON_NULL:
+                if (F_SUCC == filter_long(filter, 0)) return F_SUCC;
+                break;
+            default:
+                break;
+        }
+    }
+    return F_FAIL;
+}
+/**
+ * 判断json的路径是否存在
+ *
+ * @param filter
+ * @param json
+ * @return
+ */
+static int filter_jsonkey(const Filter *filter, const cJSON *json) {
+    if (json == 0) return F_FAIL;
+    if (!filter->key || !filter->op) return F_FAIL;
+    cJSON *item = (cJSON*)json;
+
+    // TODO 使用循环代替递归
+    for (; item; item = item->next) {
+        switch (item->type) {
+            case cJSON_Object:
+            case cJSON_Array:
+                if (item->path) {
+                    if (0 == strcasecmp(filter->key, item->path)) return F_SUCC;
+                }
+                if (item->child) {
+                    if (F_SUCC == filter_jsonkey(filter, item->child)) return F_SUCC;
+                }
+                break;
+            default:
+                if (item->path) {
+                    if (0 == strcasecmp(filter->key, item->path)) return F_SUCC;
+                }
+                break;
+        }
+    }
     return F_FAIL;
 }
 
@@ -256,15 +342,18 @@ static int filter_field(const Filter *filter, const Log_field *field) {
         return filter_string(filter, field->valstr->valstring, 0);
     }
 
-    if (field->type == TYPE_NULL)
+    if (field->type == TYPE_NULL) {
         if (filter->op == F_OP_KEY) return F_SUCC;
-        else return F_FAIL;
+        return F_FAIL;
+    }
 
-    if (IS_NUMOP(filter->op))
+    if (IS_NUMOP(filter->op)) {
         if (field->type == TYPE_DOUBLE) return filter_double(filter, field->valstr->valdbl);
-        else if(field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
-    if (IS_STROP(filter->op))
+        if (field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
+    }
+    if (IS_STROP(filter->op)) {
         return filter_string(filter, field->valstr->valstring, 0);
+    }
 
     return F_FAIL;
 }
@@ -286,9 +375,15 @@ static unsigned filter_key(const Filter *filter, const Log *log) {
         return F_SUCC;
 
     for (;field;field=field->next)
-        if (field->key)
-            if (0 == strcasecmp(filter->key, field->key))
-                return F_SUCC;
+        if (field->key) {
+            // 只有过滤器中包含jsonkey分隔符的时候，在判断。减少不必要的循环
+            if (filter->op == F_OP_JSONKEY && field->type == TYPE_JSON) {
+                // 匹配json key
+                if (filter_jsonkey(filter, field->valjson)) return F_SUCC;
+            } else {
+                if (0 == strcasecmp(filter->key, field->key)) return F_SUCC;
+            }
+        }
 
     return F_FAIL;
 }
@@ -315,6 +410,7 @@ static int filter_value(const Filter *filter, const Log *log) {
 }
 
 /**
+ * TODO 高亮已匹配的字符串
  *
  * @param log
  * @return 0 表示过滤成功；1 表示无需过滤
@@ -330,7 +426,7 @@ static int filter_log(const Log *log) {
         if (ff->key) {
             // 仅仅校验键名是否存在，如果有一个条件不存在，就表示过滤成功
             if (!filter_key(ff, log)) return F_FAIL;
-            if (ff->op == F_OP_KEY)
+            if (ff->op == F_OP_KEY || ff->op == F_OP_JSONKEY)
                 continue;
 
             if (0 == strcasecmp(ff->key, COL_HOST) && !filter_host(ff, log->host))

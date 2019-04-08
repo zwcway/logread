@@ -26,9 +26,6 @@ void field_free(Log_field *f) {
     while (f) {
         next = f->next;
 
-        free(f->key);
-        f->key = 0;
-
         if (f->valjson) {
             cJSON_Delete(f->valjson);
             f->valjson = 0;
@@ -41,6 +38,10 @@ void field_free(Log_field *f) {
             free(f->valstr);
             f->valstr = 0;
         }
+
+        free(f->key);
+        f->key = 0;
+
         free(f);
         f = next;
     }
@@ -60,6 +61,9 @@ void log_free(Log *log) {
     if (log->time) {
         if (log->time->str) free(log->time->str);
         free(log->time);
+    }
+    if (log->logidstr) {
+        free(log->logidstr);
     }
     if (log->host) {
         if (log->host->ip) free(log->host->ip);
@@ -82,7 +86,7 @@ int parse_field(Log_field *field, char *tmp) {
             LF_DOUBLE(field, tmp);
             break;
         case TYPE_JSON:
-            field->valjson = cJSON_Parse(tmp);
+            field->valjson = cJSON_ParseWithOpts(tmp, 0, 0, field->key);
             if (field->valjson == 0) {
                 valtype = TYPE_STRING;
             }

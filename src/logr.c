@@ -3,14 +3,25 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "logr.h"
 #include "filter.h"
 #include "format.h"
 #include "output.h"
+#include "same-inode.h"
+#include "highlight.h"
 
 
 static FILE* logfileList[MAX_LOGFILE];
+
+static struct stat out_stat;
+
+int color_option = 0;
+bool dev_null_output = false;
+
+void ReadLine(int);
+void ReadPipe(int);
 
 void PrintHelp(char *prog) {
     printf("用法: %s [参数]... [文件]...\n", prog);
@@ -24,8 +35,10 @@ void PrintHelp(char *prog) {
     printf("	                     time (日志生成时间): %s\n", COL_TIME);
     printf("	                     level(日志等级)    : %s\n", COL_LEVEL);
     printf("	                     file (来源文件)    : %s\n", COL_FILE);
-    printf("	                     logid(日志ID)     : %s\n", COL_LOGID);
-    printf("	                     extra(其他)       : %s\n", COL_EXTRA);
+    printf("	                     logid(日志ID)      : %s\n", COL_LOGID);
+    printf("	                     extra(其他)        : %s\n", COL_EXTRA);
+    printf("\n");
+    printf("  -C                   同 -c|--column 。所有列必须同时存在。\n");
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
     printf("                         key*val   指定字段中，任意位置模糊查找\n");
@@ -53,6 +66,7 @@ void PrintHelp(char *prog) {
 
 void PrintVersion(char *prog) {
     printf("%s 版本号 %s\n", prog, VERSION);
+    printf("项目地址：https://git.afpai.com/zhaoweichen/logread\n");
 }
 
 /**
@@ -64,25 +78,29 @@ void PrintVersion(char *prog) {
  */
 int ParseArg(int argc, char *argv[]) {
     int c;
-    int helpflg = 0, verflg = 0, errflg = 0, debug = 0, outputtype = OUTPUT_STRING;
+    int helpflg = 0, verflg = 0, errflg = 0, dbgflg = 0, outputtype = OUTPUT_STRING;
 
     struct option longopts[] =
             {
-                    {"column", 1, 0,           'c'},
-                    {"filter", 1, 0,           'f'},
-                    {"help",   0, &helpflg,    'h'},
-                    {"json",   0, &outputtype, 'j'},
-                    {"version",0, &verflg,     'v'},
-                    {0,        0, 0,        0}
+                    {"column", required_argument,   0,              'c'},
+                    {"filter", required_argument,   0,              'f'},
+                    {"help",   no_argument,         &helpflg,       'h'},
+                    {"json",   no_argument,         &outputtype,    'j'},
+                    {"version",no_argument,         &verflg,        'v'},
+                    {"debug"  ,no_argument,         &dbgflg,        DEBUG_OPTION},
+                    {0,        0,                   0,              0}
             };
 
-    while ((c = getopt_long(argc, argv, "jJvhc:f:t:kcdD", longopts, NULL)) != EOF) {
+    while ((c = getopt_long(argc, argv, "JC:f:c:", longopts, NULL)) != EOF) {
         switch (c) {
             case 'h':
                 helpflg = 1;
                 break;
             case 'c':
-                collect_colmun(optarg);
+                collect_colmun(optarg, FC_OR);
+                break;
+            case 'C':
+                collect_colmun(optarg, FC_AND);
                 break;
             case 'f':
                 collect_filter(optarg);
@@ -96,13 +114,37 @@ int ParseArg(int argc, char *argv[]) {
             case 'J':
                 outputtype = OUTPUT_JSON_NOREC;
                 break;
+            case DEBUG_OPTION:
+                dbgflg = 1;
+                break;
             case '?':
                 errflg++;
                 break;
             default:
-//                printf("the option is%c--->%d, the argu is %s\n", c, c, optarg);
+                errflg++;
                 break;
         }
+    }
+
+    // 检测输出设备，校验设备是否支持颜色
+    bool possibly_tty = false;
+    struct stat tmp_stat;
+    if (fstat (STDOUT_FILENO, &tmp_stat) == 0) {
+        if (S_ISREG (tmp_stat.st_mode))
+            out_stat = tmp_stat;
+        else if (S_ISCHR (tmp_stat.st_mode)) {
+            struct stat null_stat;
+            if (stat ("/dev/null", &null_stat) == 0 && SAME_INODE (tmp_stat, null_stat))
+                dev_null_output = true;
+            else
+                possibly_tty = true;
+        }
+    }
+
+    color_option = possibly_tty && should_colorize() && isatty(STDOUT_FILENO);
+
+    if (dbgflg) {
+        fprintf(stderr, "possibly_tty: %d dev_null_output:%d color_option:%d\n", possibly_tty, dev_null_output, color_option);
     }
 
     if (helpflg || errflg) {
@@ -116,14 +158,13 @@ int ParseArg(int argc, char *argv[]) {
 
     // 剩余参数认为是文件
     if (argc - optind > MAX_LOGFILE) {
-        printf("文件过多");
+        printf("文件过多，最多支持 %d 个文件。", MAX_LOGFILE);
         exit(1);
     }
     int i = 0, index = 0;
     int errCnt = 0;
     for (i = optind; i < argc; i++) {
         index = i - optind;
-//        printf("file %d => %s\n", i, argv[i]);
         if (! (logfileList[index] = fopen(argv[i], "r"))) {
             printf("文件打开失败 %s\n", argv[i]);
             errCnt ++;
@@ -138,6 +179,8 @@ int ParseArg(int argc, char *argv[]) {
         exit(1);
     }
 
+    parse_logr_colors();
+
     format_init();
 
     if (i > optind)
@@ -147,6 +190,7 @@ int ParseArg(int argc, char *argv[]) {
 
     format_free();
     filter_free();
+    color_dict_free();
 
     return 1;
 }

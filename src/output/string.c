@@ -6,125 +6,137 @@
 #include "logr.h"
 #include "filter.h"
 
+/**
+ * 字符串缓存
+ */
+static char str_buffer[MAX_LINE];
+
+/**
+ * 输出JSON至缓存
+ * TODO 支持JSON高亮
+ * TODO 不使用递归
+ * @param __output
+ * @param json
+ */
 void print_json_to_str(char **__output, cJSON *json) {
-    cJSON *next;
     if (!json) return;
 
-    while(json) {
-        next = json->next;
-
+    for(; json ; json = json->next) {
         switch (json->type) {
             case cJSON_String:
-                if (json->string) P_JKEY(__output, json->string);
-                P_JSTR(__output, json->valuestring);
+                if (json->string) P_STRQJ_BUF(__output, json->string);
+                P_STRQ_BUF(__output, json->valuestring);
                 break;
             case cJSON_Number:
-                if (json->string) P_JKEY(__output, json->string);
-                if (json->valuedouble == (double)json->valueint) hl_jint(__output, json->valueint);
-                else hl_jdbl(__output, json->valuedouble);
+                if (json->string) P_STRQJ_BUF(__output, json->string);
+                P_STR_BUF(__output, json->valuestring);
                 break;
             case cJSON_False:
-                if (json->string) hl_jkey(__output, json->string);
-                hl_jbln(__output, json->valueint ? "true" : "false");
-                break;
             case cJSON_True:
-                if (json->string) hl_jkey(__output, json->string);
-                hl_jbln(__output, json->valueint ? "true" : "false");
+                if (json->string) P_STRQJ_BUF(__output, json->string);
+                P_STR_BUF(__output, json->valueint ? "true" : "false");
                 break;
             case cJSON_NULL:
-                if (json->string) hl_jkey(__output, json->string);
-                hl_jnul(__output, "NULL");
+                if (json->string) P_STRQJ_BUF(__output, json->string);
+                P_STR_BUF(__output, "NULL");
                 break;
             case cJSON_Object:
-                if (json->string) P_JKEY(__output, json->string);
-                hl_jobj(__output, "{");
+                if (json->string) P_STRQJ_BUF(__output, json->string);
+                P_STR_BUF(__output, "{");
                 print_json_to_str(__output, json->child);
-                hl_jobj(__output, "}");
+                P_STR_BUF(__output, "}");
                 break;
             case cJSON_Array:
-                hl_jary(__output, "[");
+                P_STR_BUF(__output, "[");
                 print_json_to_str(__output, json->child);
-                hl_jary(__output, "]");
+                P_STR_BUF(__output, "]");
                 break;
             default:
                 break;
         }
 
-        if (next) hl_jcma(__output, ",");
-
-        json = next;
+        if (json->next) P_STR_BUF(__output, ",");
     }
 }
-
+/**
+ * 打印一个字段
+ *
+ * @param __output
+ * @param field
+ */
 void print_str_field(char **__output, const Log_field *field) {
-    hl_key(__output, field->key);
-    hl_op(__output, LOGR_OP);
+    // 先将所有字符打印至一个缓存中
+    char *val = str_buffer;
 
     switch (field->type) {
+        case TYPE_LONG:
+        case TYPE_DOUBLE:
         case TYPE_STRING:
         case TYPE_IP:
-            hl_str(__output, field->valstr->valstring);
-            break;
-        case TYPE_LONG:
-            hl_long(__output, field->valstr->vallong);
-            break;
-        case TYPE_DOUBLE:
-            hl_double(__output, field->valstr->valdbl);
+            P_STR_BUF(&val, field->valstr->valstring);
             break;
         case TYPE_JSON:
-            print_json_to_str(__output, field->valjson);
+            print_json_to_str(&val, field->valjson);
             break;
         default:break;
     }
+
+    P_STR(__output, field->key, str_buffer);
 }
 
-int print_log_to_str(char **__output, const Log *log) {
-    int count = 0, isPrinted = 0, lastPrinted = 0;
+int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, const int opt) {
+    char **__output = (char **)arg;
+    int count = 0, isPrinted = 0;
     Log_field *field = log->value;
 
-    if(log->host && log->host->ip && IS_FC_FAIL(COL_HOST)) {
+    if(log->host && log->host->ip && F_FAIL == filter_column(col, COL_HOST)) {
         P_STR(__output, COL_HOST, log->host->ip);
         count++;
     }
 
-    if(log->level && log->level->lstr && IS_FC_FAIL(COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_FAIL == filter_column(col, COL_LEVEL)) {
         P_STR(__output, COL_LEVEL, log->level->lstr);
         count++;
     }
 
-    if (IS_FC_FAIL(COL_LOGID)) {
-        P_LONG(__output, COL_LOGID, log->logid);
+    if (F_FAIL == filter_column(col, COL_LOGID)) {
+        P_STR(__output, COL_LOGID, log->logidstr);
         count++;
     }
 
-    if (log->file && IS_FC_FAIL(COL_FILE)) {
+    if (log->file && F_FAIL == filter_column(col, COL_FILE)) {
         P_STR(__output, COL_FILE, log->file);
         count++;
     }
-    if (log->time && log->time->str && IS_FC_FAIL(COL_TIME)) {
+    if (log->time && log->time->str && F_FAIL == filter_column(col, COL_TIME)) {
         P_STR(__output, COL_TIME, log->time->str);
         count++;
     }
 
-    while(field) {
-        isPrinted = IS_FC_FAIL(field->key);
+    for(; field; field = field->next) {
+        isPrinted = (F_FAIL == filter_column(col, field->key));
         if (isPrinted) {
-            if (lastPrinted) P_SPC(__output, LOGR_SPC);
-
             print_str_field(__output, field);
             count++;
-            lastPrinted = isPrinted;
         }
-        field = field->next;
-
     };
 
-    if (log->extra && IS_FC_FAIL(COL_EXTRA)) {
-        if (lastPrinted) P_SPC(__output, LOGR_SPC);
-        hl_key(__output, COL_EXTRA);
-        hl_op(__output, LOGR_OP);
-        hl_str(__output, log->extra);
+    if (log->extra && F_FAIL == filter_column(col, COL_EXTRA)) {
+        P_STR(__output, COL_EXTRA, log->extra);
         count++;
+    }
+
+    return count;
+}
+
+int print_log_to_str(char **__output, const Log *log) {
+    int count = 0, opt = 0;
+
+    count = filter_column_callback(__output, log, opt, print_log_to_str_column);
+
+    // 去掉末尾的空格
+    if (is_spc((*__output) - 1)) {
+        *((*__output) - 1) = '\0';
     }
 
     return count;

@@ -116,6 +116,7 @@ unsigned char parse_filter(Filter *filter, const char *str) {
         }
     } else {
         if (filter->key) filter->op = F_OP_KEY;
+        if (strstr(filter->key, CJSON_PATH_DELIMITER)) filter->op = F_OP_JSONKEY;
         else return 0;
     }
 
@@ -145,7 +146,7 @@ int collect_filter(const char *f) {
     return 1;
 }
 
-void add_column(char *c, unsigned char type) {
+void add_column(char *c, unsigned char type, unsigned char cond) {
     if (!cts_cur)
         cts_cur = cts = (Column_list*)calloc(1, sizeof(Column_list));
     else {
@@ -155,10 +156,10 @@ void add_column(char *c, unsigned char type) {
     cts_cur->next = 0;
     cts_cur->column = skip(c);
     cts_cur->type = type;
-
+    cts_cur->cond = cond;
 }
 
-int collect_colmun(const char *c) {
+int collect_colmun(const char *c, unsigned char cond) {
     char *str = (char*)c;
     char *col = strtok(str, ",");
     size_t len = 0;
@@ -173,31 +174,41 @@ int collect_colmun(const char *c) {
             type |= FC_LEFT;
             col[len] = '\0';
         }
-        add_column(col, type);
+        add_column(col, type, cond);
         col = strtok(NULL, ",");
     }
     return 1;
 }
 
-int filter_column(const char *key) {
-    Column_list *cur = cts;
-
+int filter_column(const Column_list *cur, const char *key) {
     if (!key) return F_SUCC;
 
-    if (cts) {
-        for (; cur; cur = cur->next) {
-            if (cur->type == FC_RIGHT) {
-                if (striright(key, cur->column)) return F_FAIL;
-            } else if (cur->type == FC_LEFT) {
-                if (strileft(key, cur->column)) return F_FAIL;
-            } else if(cur->type == FC_LR) {
-                if (stristr(key, cur->column)) return F_FAIL;
-            } else if(cur->type == FC_NORMAL) {
-                if (0 == strcasecmp(key, cur->column)) return F_FAIL;
-            }
-        }
-        return F_SUCC;
+    if (!cur) return F_FAIL;
+
+    if (cur->type == FC_RIGHT) {
+        if (striright(key, cur->column)) return F_FAIL;
+    } else if (cur->type == FC_LEFT) {
+        if (strileft(key, cur->column)) return F_FAIL;
+    } else if(cur->type == FC_LR) {
+        if (stristr(key, cur->column)) return F_FAIL;
+    } else if(cur->type == FC_NORMAL) {
+        if (0 == strcasecmp(key, cur->column)) return F_FAIL;
     }
 
-    return F_FAIL;
+    return F_SUCC;
+}
+
+int  filter_column_callback(void* arg, const Log *log, const int opt, print_colmn_func func) {
+    int count = 0, lastcount = -1;
+    if (cts) {
+        for (Column_list *cur = cts; cur; cur = cur->next) {
+            if (cur->cond == FC_AND && lastcount == 0) return 0;
+            lastcount = func(arg, log, cur, lastcount > 0 ? opt | FC_OPT_LASTSUCC : opt);
+            count += lastcount;
+        }
+    } else {
+        count += func(arg, log, 0, opt);
+    }
+
+    return count;
 }

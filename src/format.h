@@ -96,6 +96,7 @@ typedef struct Log {
     char *file;
     /** 日志id */
     long long logid;
+    char * logidstr;
     /** 其他扩展字符串 */
     char *extra;
     /** 链表 */
@@ -152,6 +153,7 @@ FORMATER_DESTORY_FUNCNAME(name) \
 (log)->time = 0; \
 (log)->file = 0; \
 (log)->logid = 0; \
+(log)->logidstr = 0; \
 (log)->extra = 0; \
 (log)->value = 0; \
 (log)->pos = 0; \
@@ -220,7 +222,7 @@ void format(const char *, unsigned long, int);
 /**
  * 取子字符串，并支持删除两边空格
  *
- * TODO 使用 lstring，避免使用 memcpy
+ * TODO 使用 lstring
  * @param str
  * @param len
  * @param trim 0保持原样；1删除空格

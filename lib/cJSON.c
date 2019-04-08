@@ -44,6 +44,7 @@ static int cJSON_strcasecmp(const char *s1,const char *s2)
 }
 
 static void *(*cJSON_malloc)(size_t sz) = malloc;
+static void *(*cJSON_calloc)(size_t num, size_t sz) = calloc;
 static void (*cJSON_free)(void *ptr) = free;
 
 static char* cJSON_slashes(const char* str) {
@@ -88,11 +89,13 @@ void cJSON_InitHooks(cJSON_Hooks* hooks)
 {
     if (!hooks) { /* Reset hooks */
         cJSON_malloc = malloc;
+        cJSON_calloc = calloc;
         cJSON_free = free;
         return;
     }
 
 	cJSON_malloc = (hooks->malloc_fn)?hooks->malloc_fn:malloc;
+	cJSON_calloc = (hooks->calloc_fn)?hooks->calloc_fn:calloc;
 	cJSON_free	 = (hooks->free_fn)?hooks->free_fn:free;
 }
 
@@ -113,7 +116,10 @@ void cJSON_Delete(cJSON *c)
 		next=c->next;
 		if (!(c->type&cJSON_IsReference) && c->child) cJSON_Delete(c->child);
 		if (!(c->type&cJSON_IsReference) && c->valuestring) cJSON_free(c->valuestring);
-		if (!(c->type&cJSON_StringIsConst) && c->string) cJSON_free(c->string);
+		if (!(c->type&cJSON_StringIsConst) && c->string) {
+			if (c->path) cJSON_free(c->path);
+			cJSON_free(c->string);
+		}
 		cJSON_free(c);
 		c=next;
 	}
@@ -122,6 +128,7 @@ void cJSON_Delete(cJSON *c)
 /* Parse the input text to generate a number, and populate the result into item. */
 static const char *parse_number(cJSON *item,const char *num)
 {
+	const char *nump = num;
 	double n=0,sign=1,scale=0;int subscale=0,signsubscale=1;
 
 	if (*num=='-') sign=-1,num++;	/* Has sign? */
@@ -137,6 +144,7 @@ static const char *parse_number(cJSON *item,const char *num)
 	
 	item->valuedouble=n;
 	item->valueint=(int)n;
+	item->valuestring = strndup(nump, num - nump);
 	item->type=cJSON_Number;
 	return num;
 }
@@ -144,6 +152,23 @@ static const char *parse_number(cJSON *item,const char *num)
 static int pow2gt (int x)	{	--x;	x|=x>>1;	x|=x>>2;	x|=x>>4;	x|=x>>8;	x|=x>>16;	return x+1;	}
 
 typedef struct {char *buffer; int length; int offset; } printbuffer;
+
+static char* pathcat(const char *path, const char *key) {
+	char *new;
+	size_t len = 0, plen = strlen(path);
+	if (plen) len += plen + strlen(CJSON_PATH_DELIMITER);
+	len += strlen(key) + 1;
+	new = (char*)cJSON_calloc(1, len);
+	if (plen) { strcat(new, path);strcat(new, CJSON_PATH_DELIMITER); }
+	strcat(new, key);
+	return new;
+}
+
+static char* pathcatint(const char *path, const int key) {
+	char keystr[11];
+	sprintf(keystr, "%d", key);
+	return pathcat(path, keystr);
+}
 
 static char* ensure(printbuffer *p,int needed)
 {
@@ -344,13 +369,13 @@ static const char *parse_object(cJSON *item,const char *value);
 static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p);
 
 /* Parse an object - create a new root, and populate. */
-cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated)
+cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated, const char *path)
 {
 	const char *end=0;
 	cJSON *c=cJSON_New_Item();
 	ep=0;
 	if (!c) return 0;       /* memory fail */
-
+	if (path) c->path = cJSON_strdup(path);
 	end=parse_value(c,skip(value));
 	if (!end)	{cJSON_Delete(c);return 0;}	/* parse failure. ep is set. */
 
@@ -360,7 +385,7 @@ cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int r
 	return c;
 }
 /* Default options for cJSON_Parse */
-cJSON *cJSON_Parse(const char *value) {return cJSON_ParseWithOpts(value,0,0);}
+cJSON *cJSON_Parse(const char *value) {return cJSON_ParseWithOpts(value,0,0,0);}
 
 /* Render a cJSON item/entity/structure to text. */
 char *cJSON_Print(cJSON *item)				{return print_value(item,0,1,0);}
@@ -430,6 +455,7 @@ static char *print_value(cJSON *item,int depth,int fmt,printbuffer *p)
 static const char *parse_array(cJSON *item,const char *value)
 {
 	cJSON *child;
+	int index = 0;
 	if (*value!='[')	{ep=value;return 0;}	/* not an array! */
 
 	item->type=cJSON_Array;
@@ -438,8 +464,10 @@ static const char *parse_array(cJSON *item,const char *value)
 
 	item->child=child=cJSON_New_Item();
 	if (!item->child) return 0;		 /* memory fail */
+	child->parent=item;
 	value=skip(parse_value(child,skip(value)));	/* skip any spacing, get the value. */
 	if (!value) return 0;
+	if(item->path) child->path = pathcatint(item->path, index++);
 
 	while (*value==',')
 	{
@@ -448,6 +476,8 @@ static const char *parse_array(cJSON *item,const char *value)
 		child->next=new_item;new_item->prev=child;child=new_item;
 		value=skip(parse_value(child,skip(value+1)));
 		if (!value) return 0;	/* memory fail */
+		child->parent=item;
+		if(item->path) child->path = pathcatint(item->path, index++);
 	}
 
 	if (*value==']') return value+1;	/* end of array */
@@ -546,9 +576,11 @@ static const char *parse_object(cJSON *item,const char *value)
 	
 	item->child=child=cJSON_New_Item();
 	if (!item->child) return 0;
+	child->parent=item;
 	value=skip(parse_string(child,skip(value)));
 	if (!value) return 0;
 	child->string=child->valuestring;child->valuestring=0;
+	if(item->path) child->path = pathcat(item->path, child->string);
 	if (*value!=':') {ep=value;return 0;}	/* fail! */
 	value=skip(parse_value(child,skip(value+1)));	/* skip any spacing, get the value. */
 	if (!value) return 0;
@@ -560,7 +592,9 @@ static const char *parse_object(cJSON *item,const char *value)
 		child->next=new_item;new_item->prev=child;child=new_item;
 		value=skip(parse_string(child,skip(value+1)));
 		if (!value) return 0;
+		child->parent=item;
 		child->string=child->valuestring;child->valuestring=0;
+		if(item->path) child->path = pathcat(item->path, child->string);
 		if (*value!=':') {ep=value;return 0;}	/* fail! */
 		value=skip(parse_value(child,skip(value+1)));	/* skip any spacing, get the value. */
 		if (!value) return 0;

@@ -38,23 +38,15 @@ ADD_DEFINITIONS(-D_GNU_SOURCE)
 #ENDIF()
 
 INCLUDE_DIRECTORIES(
-        include/
+        lib/
+        src/
 )
 
-AUX_SOURCE_DIRECTORY(src DIR_SRCS)
-AUX_SOURCE_DIRECTORY(src/format DIR_SRCS)
-AUX_SOURCE_DIRECTORY(src/output DIR_SRCS)
-AUX_SOURCE_DIRECTORY(include DIR_HEADERS)
-AUX_SOURCE_DIRECTORY(include/format DIR_HEADERS)
-AUX_SOURCE_DIRECTORY(include/output DIR_HEADERS)
-
-SET(Sources
-        ${DIR_HEADERS}
-        ${DIR_SRCS}
-        )
+FILE(GLOB_RECURSE DIR_SRCS lib/*.c src/*.c)
+FILE(GLOB_RECURSE DIR_HEADERS lib/*.h src/*.h)
 
 ADD_EXECUTABLE(${PROJECT_NAME}
-        ${Sources}
+        ${DIR_SRCS}
 #        ${BISON_Parser_OUTPUTS}
 #        ${FLEX_Scanner_OUTPUTS}
         )

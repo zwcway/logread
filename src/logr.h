@@ -1,7 +1,10 @@
 #ifndef LOGR_LOGR_H
 #define LOGR_LOGR_H
 
-#define VERSION "0.4.2"
+#include <stdbool.h>
+#include <limits.h>
+
+#define VERSION "0.5.1"
 #define PROGRAM "logr"
 /**
  * 单次读取一行的最大字符数
@@ -21,8 +24,16 @@
 #define COL_EXTRA "x"
 
 
-void PrintHelp(char *prog);
-int ParseArg(int argc, char *argv[]);
-void ReadLine();
-void ReadPipe();
+extern int color_option;
+
+/** Stdout 被指向 /dev/null.  */
+extern bool dev_null_output;
+
+
+/* 没有相应的短命名参数  */
+enum
+{
+    DEBUG_OPTION = CHAR_MAX + 1,
+};
+
 #endif

@@ -187,6 +187,7 @@ FORMATER_PROC_FUNC(app) {
     colcnt++;
 
     log->logid = 0;
+    log->logidstr = 0;
 
     // extra
     log->extra = 0;

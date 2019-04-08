@@ -5,10 +5,20 @@
 #ifndef LOGR_UTILS_H
 #define LOGR_UTILS_H
 
-#define is_end(chr)  (*(chr)=='\0'||*(chr)=='\n'||*(chr)=='\r')
-#define is_eof(chr)  (*(chr)=='\0')
-#define is_spc(strchr)  (*(strchr)==' ')
-#define is_spcs(strchr)  (*(strchr)==' '||*(strchr)=='\n'||*(strchr)=='\r')
+#include <stdio.h>
+#include <string.h>
+#include <sys/cdefs.h>
+
+#define is_end(chr)  (*((char *)chr)=='\0'||*((char *)chr)=='\n'||*((char *)chr)=='\r')
+#define is_eof(chr)  (*((char *)chr)=='\0')
+#define is_spc(strchr)  (*((char *)strchr)==' ')
+#define is_spcs(strchr)  (*((char *)strchr)==' '||*((char *)strchr)=='\n'||*((char *)strchr)=='\r')
+
+#define STREQ(a, b)     (strcmp (a, b) == 0)
+
+extern int should_colorize (void);
+
+extern size_t concat(char*, ...);
 
 void urldecode2(char *, const char *);
 extern char * strstri(const char *, const char *) __THROW __attribute_pure__ __nonnull ((1, 2));
