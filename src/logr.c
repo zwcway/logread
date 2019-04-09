@@ -91,7 +91,7 @@ int ParseArg(int argc, char *argv[]) {
                     {0,        0,                   0,              0}
             };
 
-    while ((c = getopt_long(argc, argv, "JC:f:c:", longopts, NULL)) != EOF) {
+    while ((c = getopt_long(argc, argv, "hvjJC:f:c:", longopts, NULL)) != EOF) {
         switch (c) {
             case 'h':
                 helpflg = 1;
@@ -141,7 +141,7 @@ int ParseArg(int argc, char *argv[]) {
         }
     }
 
-    color_option = 1;//possibly_tty && should_colorize() && isatty(STDOUT_FILENO);
+    color_option = possibly_tty && should_colorize() && isatty(STDOUT_FILENO);
 
     if (dbgflg) {
         fprintf(stderr, "possibly_tty: %d dev_null_output:%d color_option:%d\n", possibly_tty, dev_null_output, color_option);
