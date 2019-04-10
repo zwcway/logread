@@ -32,10 +32,8 @@ int print_log(const Log *log, int type) {
             count = print_log_to_json(&__output, log, 0);
 
         if (0 < count) {
-            *(__output - 1) = '\n';
-//            *__output++ = '\r';
-            *__output = '\0';
             fputs(outputstr, stdout);
+            fputs("\n\r", stdout);
             fflush(stdout);
         }
     }

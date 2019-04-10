@@ -28,10 +28,10 @@
 #define HL_INTERNAL_HIGHLIGHT   "hl"
 
 
-#define PRINTF_LENGTH       MAX_LINE - (outputstr - *(__str))
+#define PRINTF_LENGTH(__buf, __str)       MAX_LINE - (__buf - *(__str))
 
-#define SPRTF_STR_COLOR(__str, color, __val)        (*(__str)) += snprintf(*(__str), PRINTF_LENGTH, HL_START "%s" HL_END, color, __val)
-#define SPRTF_STR(__str, __val)                     (*(__str)) += snprintf(*(__str), PRINTF_LENGTH, "%s", __val)
+#define SPRTF_STR_COLOR(__str, color, __val)        (*(__str)) += snprintf(*(__str), PRINTF_LENGTH(outputstr, __str), HL_START "%s" HL_END, color, __val)
+#define SPRTF_STR(__str, __val)                     (*(__str)) += snprintf(*(__str), PRINTF_LENGTH(outputstr, __str), "%s", __val)
 
 #define SPRTF_STR_CBUF(__str, __len, __col, __val)   if (__val) (*(__str)) += snprintf(*(__str), (size_t)__len, HL_START "%s" HL_END, __col, __val)
 #define SPRTF_STR_BUF(__str, __len, __fmt, __val)   if (__val) (*(__str)) += snprintf(*(__str), (size_t)__len, __fmt, __val)
