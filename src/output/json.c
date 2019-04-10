@@ -14,7 +14,7 @@ void print_json_field(cJSON *__json, const Log_field *field, const int _rec) {
     switch (field->type) {
         case TYPE_STRING:
         case TYPE_IP:
-            _item = cJSON_CreateString(field->valstr->valstring);
+            _item = cJSON_CreateString(field->valstr->valstring ? field->valstr->valstring : "");
             break;
         case TYPE_LONG:
         case TYPE_DOUBLE:

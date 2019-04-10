@@ -9,10 +9,11 @@
 #include <string.h>
 #include <sys/cdefs.h>
 
-#define is_end(chr)  (*((char *)chr)=='\0'||*((char *)chr)=='\n'||*((char *)chr)=='\r')
+#define is_nr(chr)  (*((char *)chr)=='\n'||*((char *)chr)=='\r')
 #define is_eof(chr)  (*((char *)chr)=='\0')
+#define is_end(chr)  (is_eof(chr)||(is_nr(chr)))
 #define is_spc(strchr)  (*((char *)strchr)==' ')
-#define is_spcs(strchr)  (*((char *)strchr)==' '||*((char *)strchr)=='\n'||*((char *)strchr)=='\r')
+#define is_spcs(strchr)  (is_spc(strchr)||is_nr(strchr))
 
 #define STREQ(a, b)     (strcmp (a, b) == 0)
 

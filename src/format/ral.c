@@ -15,7 +15,7 @@ regex_t *reg_ral = 0;
 regmatch_t __ral_pmatch[1];
 
 
-int has_op(char *line) {
+static int has_op(char *line) {
     char *tmp = line;
     while (*tmp != '\0' && *tmp != OP_CLOSE) {
         if (*tmp == OP_SPER) return 1;
@@ -24,7 +24,7 @@ int has_op(char *line) {
     return 0;
 }
 
-char* strdecode(char *string) {
+static char* strdecode(char *string) {
     char *dest = (char*)malloc(strlen(string) + 1);
     urldecode2(dest, string);
     while (!is_end(string)) {
@@ -35,7 +35,7 @@ char* strdecode(char *string) {
     return dest;
 }
 
-int parse_ral(Log *log, const char *line) {
+static int parse_ral(Log *log, const char *line) {
     char *steper = (char *)line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
     int valtype = 0;

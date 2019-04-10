@@ -17,7 +17,7 @@ regex_t *reg_app = 0;
 regmatch_t __app_pmatch[1];
 
 
-int app_has_op(char *line) {
+static int app_has_op(char *line) {
     char *tmp = line;
     while (*tmp != '\0') {
         if (*tmp == OP_OPEN || *tmp == OP_CLOSE) return 1;
@@ -26,7 +26,7 @@ int app_has_op(char *line) {
     return 0;
 }
 
-int parse_app(Log *log, const char *line) {
+static int parse_app(Log *log, const char *line) {
     char *steper = (char *)line;
     char *start = 0, *end = 0, *tmp = 0, *key = 0;
     unsigned char stch = 0;
@@ -59,6 +59,11 @@ int parse_app(Log *log, const char *line) {
                 }
                 break;
             case OP_OPEN:
+                if(*(steper - 1) == OP_SPER) {
+                    while(!is_nr(steper + 1)) steper++;
+                    goto PARSE_EXTRA;
+                }
+
                 if (key) {
                     keyLen = steper - key;
                     field->key = sub_trim(key, keyLen);
@@ -106,6 +111,7 @@ int parse_app(Log *log, const char *line) {
         }
     } while(!is_eof(++steper));
 
+    PARSE_EXTRA:
     //结尾存在字符串
     if (key && !is_end(key)) {
         log->extra = sub_trim(key, steper - key);
