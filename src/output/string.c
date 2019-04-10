@@ -25,7 +25,7 @@ void print_json_to_str(char **__output, cJSON *json) {
     for(; json ; json = json->next) {
         switch (json->type) {
             case cJSON_String:
-                /* 使用 @see cJSON_PrintBuffered */
+                /* TODO 使用 @see cJSON_PrintBuffered 格式化处理转义字符、编码等等 */
                 if (json->string) P_STRQJ_BUF(__output, json->string);
                 P_STRQ_BUF(__output, json->valuestring);
                 break;
