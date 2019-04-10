@@ -229,7 +229,8 @@ cJSON* filter_json_duplicate(const cJSON *json) {
  * @return
  */
 Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
-    if (!cur || !field) return NULL;
+    if (!field) return NULL;
+    if (!cur) return field;
 
     if ((cur->type&FC_JSON) && field->type == TYPE_JSON) {
         const cJSON *json;
@@ -253,19 +254,20 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
  * @return F_SUCC：允许输出列
  */
 int filter_column(const Column_list *cur, const char *key) {
-    if (!cur || !key) return F_FAIL;
+    if (!key) return F_FAIL;
+    if (!cur) return F_SUCC;
 
     if((cur->type & FC_RIGHT) && (cur->type & FC_LEFT)) {
-        if (!stristr(key, cur->column)) return F_FAIL;
+        if (stristr(key, cur->column)) return F_SUCC;
     } else if (cur->type & FC_RIGHT) {
-        if (!striright(key, cur->column)) return F_FAIL;
+        if (striright(key, cur->column)) return F_SUCC;
     } else if (cur->type & FC_LEFT) {
-        if (!strileft(key, cur->column)) return F_FAIL;
+        if (strileft(key, cur->column)) return F_SUCC;
     } else {
-        if (0 != strcasecmp(key, cur->column)) return F_FAIL;
+        if (0 == strcasecmp(key, cur->column)) return F_SUCC;
     }
 
-    return F_SUCC;
+    return F_FAIL;
 }
 
 int  filter_column_callback(void* arg, const Log *log, const int opt, print_colmn_func func) {
