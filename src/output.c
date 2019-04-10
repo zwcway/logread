@@ -33,7 +33,9 @@ int print_log(const Log *log, int type) {
 
         if (0 < count) {
             fputs(outputstr, stdout);
-            fputs("\n\r", stdout);
+            fputs("\n", stdout);
+            if (color_option)
+                fputs("\r", stdout);
             fflush(stdout);
         }
     }

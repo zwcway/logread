@@ -37,10 +37,11 @@
 #define F_OP_JSONKEY  98
 #define F_OP_VAL  99
 
-#define FC_NORMAL 0
-#define FC_LEFT 1
-#define FC_RIGHT 2
-#define FC_LR (FC_LEFT | FC_RIGHT)
+#define FC_NORMAL   0
+#define FC_LEFT     1
+#define FC_RIGHT    2
+#define FC_LR       (FC_LEFT | FC_RIGHT)
+#define FC_JSON     0x10
 
 #define FC_OR 1
 #define FC_AND 2
@@ -134,6 +135,7 @@ extern void filter_free();
 extern int collect_filter(const char*);
 extern int collect_colmun(const char*, unsigned char);
 
+extern Log_field*  filter_fieldcolumn(const Column_list *cur, Log_field *field);
 extern int filter_column(const Column_list *, const char *);
 extern int filter_column_callback(void*, const Log *, int , print_colmn_func);
 

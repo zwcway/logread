@@ -174,25 +174,95 @@ int collect_colmun(const char *c, unsigned char cond) {
             type |= FC_LEFT;
             col[len] = '\0';
         }
+        if (strchr(col, '.')) {
+            type |= FC_JSON;
+        }
         add_column(col, type, cond);
         col = strtok(NULL, ",");
     }
     return 1;
 }
 
+const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
+    if (!json) return NULL;
+    if (!cur) return NULL;
+
+    cJSON *item = (cJSON*)json;
+    const cJSON *child;
+
+    // TODO 使用循环代替递归
+    for (; item; item = item->next) {
+        switch (item->type) {
+            case cJSON_Object:
+            case cJSON_Array:
+                if (item->path) {
+                    if (F_SUCC == filter_column(cur, item->path)) return item;
+                }
+                if (item->child) {
+                    if ((child = filter_jsoncolumn(cur, item->child))) return child;
+                }
+                break;
+            default:
+                if (item->path) {
+                    if (F_SUCC == filter_column(cur, item->path)) return item;
+                }
+                break;
+        }
+    }
+
+    return NULL;
+}
+
+cJSON* filter_json_duplicate(const cJSON *json) {
+    cJSON *copy = cJSON_Duplicate((cJSON*)json, true);
+
+    free(copy->string);
+    copy->string = NULL;
+
+    return copy;
+}
+
+/**
+ *
+ * @param cur
+ * @param field
+ * @return
+ */
+Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
+    if (!cur || !field) return NULL;
+
+    if ((cur->type&FC_JSON) && field->type == TYPE_JSON) {
+        const cJSON *json;
+        if((json = filter_jsoncolumn(cur, field->valjson))) {
+            Log_field *newfield = field_duplicate(field);
+            newfield->valjson = filter_json_duplicate((cJSON*)json);
+            return newfield;
+        }
+    }
+    if (F_SUCC == filter_column(cur, field->key)) {
+        return field;
+    }
+
+    return NULL;
+}
+/**
+ * 过滤列名
+ *
+ * @param cur
+ * @param key
+ * @return F_SUCC：允许输出列
+ */
 int filter_column(const Column_list *cur, const char *key) {
-    if (!key) return F_SUCC;
+    if (!cur || !key) return F_FAIL;
 
-    if (!cur) return F_FAIL;
-
-    if (cur->type == FC_RIGHT) {
-        if (striright(key, cur->column)) return F_FAIL;
-    } else if (cur->type == FC_LEFT) {
-        if (strileft(key, cur->column)) return F_FAIL;
-    } else if(cur->type == FC_LR) {
-        if (stristr(key, cur->column)) return F_FAIL;
-    } else if(cur->type == FC_NORMAL) {
-        if (0 == strcasecmp(key, cur->column)) return F_FAIL;
+    if((cur->type & FC_RIGHT) && (cur->type & FC_LEFT)) {
+        if (!stristr(key, cur->column)) return F_FAIL;
+    } else if (cur->type & FC_RIGHT) {
+        if (!striright(key, cur->column)) return F_FAIL;
+    } else if (cur->type & FC_LEFT) {
+        if (!strileft(key, cur->column)) return F_FAIL;
+    } else {
+        if (0 != strcasecmp(key, cur->column)) return F_FAIL;
     }
 
     return F_SUCC;

@@ -25,6 +25,7 @@ void print_json_to_str(char **__output, cJSON *json) {
     for(; json ; json = json->next) {
         switch (json->type) {
             case cJSON_String:
+                /* 使用 @see cJSON_PrintBuffered */
                 if (json->string) P_STRQJ_BUF(__output, json->string);
                 P_STRQ_BUF(__output, json->valuestring);
                 break;
@@ -98,39 +99,40 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     int count = 0, isPrinted = 0;
     Log_field *field = log->value;
 
-    if(log->host && log->host->ip && F_FAIL == filter_column(col, COL_HOST)) {
+    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
         P_STR(__output, COL_HOST, log->host->ip);
         count++;
     }
 
-    if(log->level && log->level->lstr && F_FAIL == filter_column(col, COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
         P_STR(__output, COL_LEVEL, log->level->lstr);
         count++;
     }
 
-    if (F_FAIL == filter_column(col, COL_LOGID)) {
+    if (F_SUCC == filter_column(col, COL_LOGID)) {
         P_STR(__output, COL_LOGID, log->logidstr);
         count++;
     }
 
-    if (log->file && F_FAIL == filter_column(col, COL_FILE)) {
+    if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
         P_STR(__output, COL_FILE, log->file);
         count++;
     }
-    if (log->time && log->time->str && F_FAIL == filter_column(col, COL_TIME)) {
+    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
         P_STR(__output, COL_TIME, log->time->str);
         count++;
     }
 
+    Log_field *field1;
     for(; field; field = field->next) {
-        isPrinted = (F_FAIL == filter_column(col, field->key));
-        if (isPrinted) {
-            print_str_field(__output, field);
+        if ((field1 = filter_fieldcolumn(col, field))) {
+            print_str_field(__output, field1);
+            if (field1 != field) field_free(field1);
             count++;
         }
     };
 
-    if (log->extra && F_FAIL == filter_column(col, COL_EXTRA)) {
+    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA)) {
         P_STR(__output, COL_EXTRA, log->extra);
         count++;
     }

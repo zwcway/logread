@@ -36,46 +36,45 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
     Log_field *field = log->value;
     cJSON * _item;
 
-    if(log->host && log->host->ip && F_FAIL == filter_column(col, COL_HOST)) {
+    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
         _item = cJSON_CreateString(log->host->ip);
         cJSON_AddItemToObject(__json, COL_HOST, _item);
         count++;
     }
 
-    if(log->level && log->level->lstr && F_FAIL == filter_column(col, COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
         _item = cJSON_CreateString(log->level->lstr);
         cJSON_AddItemToObject(__json, COL_LEVEL, _item);
         count++;
     }
 
-    if (F_FAIL == filter_column(col, COL_LOGID)) {
+    if (F_SUCC == filter_column(col, COL_LOGID)) {
         _item = cJSON_CreateNumber((double)log->logid);
         cJSON_AddItemToObject(__json, COL_LOGID, _item);
         count++;
     }
 
-    if (log->file && F_FAIL == filter_column(col, COL_FILE)) {
+    if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
         _item = cJSON_CreateString(log->file);
         cJSON_AddItemToObject(__json, COL_FILE, _item);
         count++;
     }
-    if (log->time && log->time->str && F_FAIL == filter_column(col, COL_TIME)) {
+    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
         _item = cJSON_CreateString(log->time->str);
         cJSON_AddItemToObject(__json, COL_TIME, _item);
         count++;
     }
 
+    Log_field *field1;
     for(; field; field = field->next) {
-        if (field->type == TYPE_JSON) {
-
-        }
-        else if (F_FAIL == filter_column(col, field->key)) {
-            print_json_field(__json, field, _rec);
+        if ((field1 = filter_fieldcolumn(col, field))) {
+            print_json_field(__json, field1, _rec);
+            if (field1 != field) field_free(field1);
             count++;
         }
     };
 
-    if (log->extra && F_FAIL == filter_column(col, COL_EXTRA)) {
+    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA)) {
         _item = cJSON_CreateString(log->extra);
         cJSON_AddItemToObject(__json, COL_EXTRA, _item);
         count++;

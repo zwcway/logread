@@ -53,6 +53,22 @@ void field_free(Log_field *f) {
     }
 }
 
+Log_field* field_duplicate(Log_field *f) {
+    Log_field *copy;
+
+    L_INIT_FIELD(copy);
+
+    memcpy(copy, f, sizeof(Log_field));
+
+    copy->key = strdup(f->key);
+
+    L_INIT_VALUE(copy);
+    copy->valstr->valstring = strdup(f->valstr->valstring);
+
+    copy->next = copy->prev = NULL;
+    return copy;
+}
+
 /**
  * 销毁 log
  * log初始化不是指针，因此不需要销毁log本身

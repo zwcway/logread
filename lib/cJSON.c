@@ -242,9 +242,8 @@ static unsigned parse_hex4(const char *str)
 static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 static const char *parse_string(cJSON *item,const char *str)
 {
-	const char *ptr=str+1,strqut=*str;char *ptr2;char *out;int len=0;unsigned uc,uc2;;
+	const char *ptr=str+1,strqut=*str,strrqut=(strqut=='\"'?'\'':'\"');char *ptr2;char *out;int len=0;unsigned uc,uc2;;
 	if (strqut!='\"' && strqut!='\'') {ep=str;return 0;}	/* not a string! */
-
 	while (*ptr!=strqut && *ptr && ++len) if (*ptr++ == '\\') ptr++;	/* Skip escaped quotes. */
 	
 	out=(char*)cJSON_malloc(len+1);	/* This is how long we need for the string, roughly. */
