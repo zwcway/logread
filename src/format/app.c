@@ -153,7 +153,6 @@ FORMATER_PROC_FUNC(app) {
     int colcnt = 0;
     char *logline = (char *)log_line;
     char *stt1, *stt2, *tmp;
-    struct tm tm;
 
     log->pos = lineno;
 
@@ -186,6 +185,7 @@ FORMATER_PROC_FUNC(app) {
     // time
     L_INIT_TIME(log);
     log->time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    struct tm tm;
     if (0 != strptime(log->time->str, "%y-%m-%d %H:%M:%S", &tm))
         log->time->ts = mktime(&tm);
     else

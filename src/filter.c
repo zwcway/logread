@@ -49,15 +49,7 @@ void filter_free() {
     }
 }
 
-/**
- * 支持json
- * @param key
- */
-void parse_key(const char *key) {
-
-}
-
-unsigned char parse_filter(Filter *filter, const char *str) {
+unsigned int parse_filter(Filter *filter, const char *str) {
     char *start = (char *)str;
     char nextchr;
 
@@ -97,16 +89,16 @@ unsigned char parse_filter(Filter *filter, const char *str) {
     start = (char *)++str;
     while (!is_end(str)) str++;
 
-    if (IS_NUMOP(filter->op)) {
+    if (F_IS_NUMOP(filter->op)) {
         start = sub_trim(start, str - start);
         if (start) {
             filter->vallong = atoll(start);
             filter->valdbl = atof(start);
             free(start);
         }
-    } else if(IS_STROP(filter->op)) {
+    } else if(F_IS_STROP(filter->op)) {
         filter->valstr = sub_trim(start, str - start);
-        if (filter->valstr && IS_PEGOP(filter->op)) {
+        if (filter->valstr && F_IS_PEGOP(filter->op)) {
             filter->reg = (regex_t *)malloc(sizeof(regex_t));
             if (regcomp(filter->reg, filter->valstr, REG_EXTENDED)) {
                 regfree(filter->reg);
@@ -116,9 +108,10 @@ unsigned char parse_filter(Filter *filter, const char *str) {
         }
     } else {
         if (filter->key) filter->op = F_OP_KEY;
-        if (strstr(filter->key, CJSON_PATH_DELIMITER)) filter->op = F_OP_JSONKEY;
-        else return 0;
     }
+
+    if (strstr(filter->key, CJSON_PATH_DELIMITER))
+        filter->op |= F_OPT_JSONKEY;
 
     return filter->op;
 }
@@ -153,8 +146,13 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
         cts_cur->next = (Column_list*)calloc(1, sizeof(Column_list));
         cts_cur = cts_cur->next;
     }
+    if (cts_cur->type == FCT_LTRT) {
+        cts_cur->column = skip(c);
+    } else {
+        cts_cur->column = skip(c);
+    }
+
     cts_cur->next = 0;
-    cts_cur->column = skip(c);
     cts_cur->type = type;
     cts_cur->cond = cond;
 }
@@ -163,19 +161,23 @@ int collect_colmun(const char *c, unsigned char cond) {
     char *str = (char*)c;
     char *col = strtok(str, ",");
     size_t len = 0;
-    unsigned char type = FC_NORMAL;
+    unsigned char type = FCT_NORMAL;
     while(col) {
         if (col[0] == '*') {
-            type |= FC_RIGHT;
+            type |= FCT_RIGHT;
             col++;
         }
-        len = strlen(col) - 1;
-        if (col[len] == '*') {
-            type |= FC_LEFT;
-            col[len] = '\0';
+        len = strlen(col);
+        // 避免 * 或者 **
+        if (len > 1 && col[len - 1] == '*') {
+            type |= FCT_LEFT;
+            col[len - 1] = '\0';
         }
         if (strchr(col, '.')) {
-            type |= FC_JSON;
+            type |= FCT_JSON;
+        }
+        if (!(type & (FCT_LEFT | FCT_RIGHT)) && strchr(col, '*')) {
+            type |= FCT_LTRT;
         }
         add_column(col, type, cond);
         col = strtok(NULL, ",");
@@ -185,7 +187,7 @@ int collect_colmun(const char *c, unsigned char cond) {
 
 const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
     if (!json) return NULL;
-    if (!cur) return NULL;
+    if (FC_IS_SUCCESS(cur)) return NULL;
 
     cJSON *item = (cJSON*)json;
     const cJSON *child;
@@ -230,9 +232,9 @@ cJSON* filter_json_duplicate(const cJSON *json) {
  */
 Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     if (!field) return NULL;
-    if (!cur) return field;
+    if (FC_IS_SUCCESS(cur)) return field;
 
-    if ((cur->type&FC_JSON) && field->type == TYPE_JSON) {
+    if ((cur->type&FCT_JSON) && field->type == TYPE_JSON) {
         const cJSON *json;
         if((json = filter_jsoncolumn(cur, field->valjson))) {
             Log_field *newfield = field_duplicate(field);
@@ -255,13 +257,15 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
  */
 int filter_column(const Column_list *cur, const char *key) {
     if (!key) return F_FAIL;
-    if (!cur) return F_SUCC;
+    if (FC_IS_SUCCESS(cur)) return F_SUCC;
 
-    if((cur->type & FC_RIGHT) && (cur->type & FC_LEFT)) {
+    if((cur->type & FCT_RIGHT) && (cur->type & FCT_LEFT)) {
         if (stristr(key, cur->column)) return F_SUCC;
-    } else if (cur->type & FC_RIGHT) {
+    } else if (cur->type & FCT_RIGHT) {
         if (striright(key, cur->column)) return F_SUCC;
-    } else if (cur->type & FC_LEFT) {
+    } else if (cur->type & FCT_LEFT) {
+        if (strileft(key, cur->column)) return F_SUCC;
+    } else if (cur->type & FCT_LTRT) {
         if (strileft(key, cur->column)) return F_SUCC;
     } else {
         if (0 == strcasecmp(key, cur->column)) return F_SUCC;

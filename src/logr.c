@@ -19,6 +19,7 @@ static struct stat out_stat;
 
 int color_option = 0;
 bool dev_null_output = false;
+bool debug_flag = false;
 
 void ReadLine(int);
 void ReadPipe(int);
@@ -78,7 +79,7 @@ void PrintVersion(char *prog) {
  */
 int ParseArg(int argc, char *argv[]) {
     int c;
-    int helpflg = 0, verflg = 0, errflg = 0, dbgflg = 0, outputtype = OUTPUT_STRING;
+    int helpflg = 0, verflg = 0, errflg = 0, outputtype = OUTPUT_STRING;
 
     struct option longopts[] =
             {
@@ -87,7 +88,7 @@ int ParseArg(int argc, char *argv[]) {
                     {"help",   no_argument,         &helpflg,       'h'},
                     {"json",   no_argument,         &outputtype,    'j'},
                     {"version",no_argument,         &verflg,        'v'},
-                    {"debug"  ,no_argument,         &dbgflg,        DEBUG_OPTION},
+                    {"debug"  ,no_argument,         0,              DEBUG_OPTION},
                     {0,        0,                   0,              0}
             };
 
@@ -115,7 +116,7 @@ int ParseArg(int argc, char *argv[]) {
                 outputtype = OUTPUT_JSON_NOREC;
                 break;
             case DEBUG_OPTION:
-                dbgflg = 1;
+                debug_flag = true;
                 break;
             case '?':
                 errflg++;
@@ -143,7 +144,7 @@ int ParseArg(int argc, char *argv[]) {
 
     color_option = possibly_tty && should_colorize() && isatty(STDOUT_FILENO);
 
-    if (dbgflg) {
+    if (debug_flag) {
         fprintf(stderr, "possibly_tty: %d dev_null_output:%d color_option:%d\n", possibly_tty, dev_null_output, color_option);
     }
 

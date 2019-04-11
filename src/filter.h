@@ -34,17 +34,30 @@
 #define F_OP_NEQ  57
 /** 是否存在KEY */
 #define F_OP_KEY  97
-#define F_OP_JSONKEY  98
+
+#define F_OP_MASK  0xFFF
+
+/** 标记是否是JSON的KEY */
+#define F_OPT_JSONKEY  0x1000
 #define F_OP_VAL  99
 
-#define FC_NORMAL   0
-#define FC_LEFT     1
-#define FC_RIGHT    2
-#define FC_LR       (FC_LEFT | FC_RIGHT)
-#define FC_JSON     0x10
+/** 完全匹配 */
+#define FCT_NORMAL   0x00
+/** 右边模糊，左边匹配 */
+#define FCT_LEFT     0x01
+/** 左边模糊，右边匹配 */
+#define FCT_RIGHT    0x02
+/** 中间模糊，两边匹配 */
+#define FCT_LTRT     0x04
+/** 标记为JSON路径匹配 */
+#define FCT_JSON     0x10
 
 #define FC_OR 1
 #define FC_AND 2
+
+#define F_GET_OP(__op)          ((__op & F_OP_MASK))
+#define F_IS_OP(__op, __t)      (F_GET_OP(__op) == __t)
+#define F_IS_OPT(__op, __t)      ((__op&__t))
 
 /**
  * JSON输出标记 递归输出子JSON
@@ -69,11 +82,13 @@
  */
 typedef struct Filter {
     char *key;
-    unsigned char op;
+    unsigned int op;
     char *valstr;
     long long vallong;
     double valdbl;
     regex_t *reg;
+    /** key的匹配方式 */
+    unsigned char type;
 } Filter;
 
 /**
@@ -95,11 +110,13 @@ typedef struct Column_list {
 /** 字符是否是操作符 */
 #define IS_OP(chr)  ((chr)=='>'||(chr)=='<'||'='==(chr)||'!'==(chr)||'*'==(chr)||'~'==(chr))
 /** 操作符是否是数字类 */
-#define IS_NUMOP(op)  (F_OP_EQ==(op)||F_OP_LT==(op)||F_OP_LE==(op)|| F_OP_GT==(op)||F_OP_GE==(op)||F_OP_NEQ==(op))
+#define F_IS_NUMOP(op)  (F_IS_OP(op,F_OP_EQ)||F_IS_OP(op,F_OP_LT)||F_IS_OP(op,F_OP_LE)||F_IS_OP(op,F_OP_GT)||F_IS_OP(op,F_OP_GE)||F_IS_OP(op,F_OP_NEQ))
 /** 操作符是否是字符串类 */
-#define IS_STROP(op)  (F_OP_FZ==(op)||F_OP_PG==(op)||F_OP_NFZ==(op)||F_OP_NPG==(op))
+#define F_IS_STROP(op)  (F_IS_OP(op,F_OP_FZ)||F_IS_OP(op,F_OP_PG)||F_IS_OP(op,F_OP_NFZ)||F_IS_OP(op,F_OP_NPG))
 /** 操作符是否是正则类 */
-#define IS_PEGOP(op)  (F_OP_PG==(op)||F_OP_NPG==(op))
+#define F_IS_PEGOP(op)  (F_IS_OP(op,F_OP_PG)||F_IS_OP(op,F_OP_NPG))
+
+#define FC_IS_SUCCESS(cur) (!(cur) || NULL == (cur)->column || *(cur)->column == 0)
 
 /**
  * 过滤器结构初始化 <br/>
@@ -154,7 +171,7 @@ static void F_HL_P(Highlight **__hl, const char *__str, int __of, int __ln) {
  * @return
  */
 static int filter_long(const Filter *filter, const long long lng) {
-    switch (filter->op) {
+    switch (F_GET_OP(filter->op)) {
         case F_OP_LT:
             return lng < filter->vallong;
         case F_OP_LE:
@@ -168,7 +185,6 @@ static int filter_long(const Filter *filter, const long long lng) {
         case F_OP_EQ:
             return lng == filter->vallong;
         case F_OP_KEY:
-        case F_OP_JSONKEY:
             return F_SUCC;
         default:break;
     }
@@ -182,7 +198,7 @@ static int filter_long(const Filter *filter, const long long lng) {
  * @return
  */
 static int filter_double(const Filter *filter, const double dbl) {
-    switch (filter->op) {
+    switch (F_GET_OP(filter->op)) {
         case F_OP_LT:
             return dbl < filter->valdbl;
         case F_OP_LE:
@@ -196,7 +212,6 @@ static int filter_double(const Filter *filter, const double dbl) {
         case F_OP_EQ:
             return dbl == filter->valdbl;
         case F_OP_KEY:
-        case F_OP_JSONKEY:
             return F_SUCC;
         default:break;
     }
@@ -215,7 +230,7 @@ static int filter_string(const Filter *filter, const char *str, Highlight **hl) 
     int ret = F_FAIL;
     const char *findstr = 0;
 
-    switch (filter->op) {
+    switch (F_GET_OP(filter->op)) {
         // 正则
         case F_OP_PG:
             ret = regexec(filter->reg, str, 1, pmatch, 0) == REG_NOERROR;
@@ -239,7 +254,6 @@ static int filter_string(const Filter *filter, const char *str, Highlight **hl) 
         case F_OP_NFZ: return strstr(str, filter->valstr) == 0;
         // 仅判断键名是否存在
         case F_OP_KEY:
-        case F_OP_JSONKEY:
             return F_SUCC;
         default:break;
     }
@@ -296,7 +310,7 @@ static int filter_json(const Filter *filter, const cJSON *json) {
  */
 static int filter_jsonkey(const Filter *filter, const cJSON *json) {
     if (json == 0) return F_FAIL;
-    if (!filter->key || !filter->op) return F_FAIL;
+    if (!filter->key) return F_FAIL;
     cJSON *item = (cJSON*)json;
 
     // TODO 使用循环代替递归
@@ -324,7 +338,7 @@ static int filter_jsonkey(const Filter *filter, const cJSON *json) {
 static int filter_time(const Filter *filter, const Log_time *time) {
     if (!time) return F_FAIL;
 
-    if (IS_NUMOP(filter->op)) return filter_long(filter, (long long)time->ts);
+    if (F_IS_NUMOP(filter->op)) return filter_long(filter, (long long)time->ts);
 
     return filter_string(filter, time->str, 0);
 }
@@ -342,20 +356,20 @@ static int filter_field(const Filter *filter, Log_field *field) {
     if (field == 0) return F_FAIL;
 
     if (field->type == TYPE_JSON) {
-        if (filter->key && filter->op == F_OP_JSONKEY) return filter_json(filter, field->valjson);
+        if (filter->key && F_IS_OPT(filter->op, F_OPT_JSONKEY)) return filter_json(filter, field->valjson);
         return filter_string(filter, field->valstr->valstring, &field->hl);
     }
 
     if (field->type == TYPE_NULL) {
-        if (filter->op == F_OP_KEY) return F_SUCC;
+        if (F_IS_OP(filter->op, F_OP_KEY)) return F_SUCC;
         return F_FAIL;
     }
 
-    if (IS_NUMOP(filter->op)) {
+    if (F_IS_NUMOP(filter->op)) {
         if (field->type == TYPE_DOUBLE) return filter_double(filter, field->valstr->valdbl);
         if (field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
     }
-    if (IS_STROP(filter->op)) {
+    if (F_IS_STROP(filter->op)) {
         return filter_string(filter, field->valstr->valstring, &field->hl);
     }
 
@@ -381,7 +395,7 @@ static unsigned filter_key(const Filter *filter, const Log *log) {
     for (;field;field=field->next)
         if (field->key) {
             // 只有过滤器中包含jsonkey分隔符的时候，在判断。减少不必要的循环
-            if (filter->op == F_OP_JSONKEY && field->type == TYPE_JSON) {
+            if (field->type == TYPE_JSON && F_IS_OPT(filter->op, F_OPT_JSONKEY)) {
                 // 匹配json key
                 if (filter_jsonkey(filter, field->valjson)) return F_SUCC;
             } else {
@@ -429,7 +443,7 @@ static int filter_log(const Log *log) {
         if (ff->key) {
             // 仅仅校验键名是否存在，如果有一个条件不存在，就表示过滤成功
             if (!filter_key(ff, log)) return F_FAIL;
-            if (ff->op == F_OP_KEY || ff->op == F_OP_JSONKEY)
+            if (F_IS_OP(ff->op, F_OP_KEY) || F_IS_OPT(ff->op, F_OPT_JSONKEY))
                 continue;
 
             if (0 == strcasecmp(ff->key, COL_HOST) && !filter_host(ff, log->host))

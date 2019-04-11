@@ -21,7 +21,7 @@ int print_log(const Log *log, int type) {
     char *__output = (char *)outputstr;
     int count = 0;
 
-    if (dev_null_output) return count;
+    if (dev_null_output && !debug_flag) return count;
 
     if (F_FAIL != filter_log(log)) {
         if (type == OUTPUT_STRING)
@@ -31,7 +31,7 @@ int print_log(const Log *log, int type) {
         else if (type == OUTPUT_JSON_NOREC)
             count = print_log_to_json(&__output, log, 0);
 
-        if (0 < count) {
+        if (0 < count && (!dev_null_output || debug_flag)) {
             fputs(outputstr, stdout);
             fputs("\n", stdout);
             if (color_option)

@@ -29,6 +29,8 @@ extern int color_option;
 /** Stdout 被指向 /dev/null.  */
 extern bool dev_null_output;
 
+extern bool debug_flag;
+
 
 /* 没有相应的短命名参数  */
 enum
