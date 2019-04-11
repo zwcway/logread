@@ -90,7 +90,7 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
  * @param _rec 是否递归处理子json
  * @return
  */
-int print_log_to_json(char **__str, const Log *log, const int _rec) {
+int print_log_to_json(OutputBuffer*__str, const Log *log, const int _rec) {
     cJSON *__json = cJSON_CreateObject();
     int opt = 0;
 

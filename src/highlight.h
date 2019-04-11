@@ -28,18 +28,19 @@
 #define HL_INTERNAL_HIGHLIGHT   "hl"
 
 
-#define PRINTF_LENGTH(__buf, __str)       MAX_LINE - (__buf - *(__str))
+#define PRINTF_LENGTH(__buf)       (MAX_LINE - (__buf)->offset - 1)
+#define PRINTF_NEXT(__buf)         (((__buf)->outputstr) + (__buf)->offset)
 
-#define SPRTF_STR_COLOR(__str, color, __val)        (*(__str)) += snprintf(*(__str), PRINTF_LENGTH(outputstr, __str), HL_START "%s" HL_END, color, __val)
-#define SPRTF_STR(__str, __val)                     (*(__str)) += snprintf(*(__str), PRINTF_LENGTH(outputstr, __str), "%s", __val)
+#define SPRTF_STR_COLOR(__buf, color, __val)        ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), HL_START "%s" HL_END, color, __val)
+#define SPRTF_STR(__buf, __val)                     ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), "%s", __val)
 
-#define SPRTF_STR_CBUF(__str, __len, __col, __val)   if (__val) (*(__str)) += snprintf(*(__str), (size_t)__len, HL_START "%s" HL_END, __col, __val)
-#define SPRTF_STR_BUF(__str, __len, __fmt, __val)   if (__val) (*(__str)) += snprintf(*(__str), (size_t)__len, __fmt, __val)
+#define SPRTF_STR_CBUF(__buf, __col, __val)   if (__val) ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), HL_START "%s" HL_END, __col, __val)
+#define SPRTF_STR_BUF(__buf, __fmt, __val)   if (__val) ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), __fmt, __val)
 
 
-extern void sprtf_key_val (char **__str, const char *__key, const char *__val, bool print_space);
+extern void sprtf_key_val (OutputBuffer *__str, const char *__key, const char *__val, bool print_space);
 
-extern void sprtf_hl (const char *__buf, char **__str, int __len, const char *__key, Highlight *hl);
+extern void sprtf_hl (OutputBuffer *__str, const char *__key, const Highlight *hl);
 
 extern void parse_logr_colors (void);
 

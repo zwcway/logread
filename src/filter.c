@@ -89,16 +89,9 @@ unsigned int parse_filter(Filter *filter, const char *str) {
     start = (char *)++str;
     while (!is_end(str)) str++;
 
-    if (F_IS_NUMOP(filter->op)) {
-        start = sub_trim(start, str - start);
-        if (start) {
-            filter->vallong = atoll(start);
-            filter->valdbl = atof(start);
-            free(start);
-        }
-    } else if(F_IS_STROP(filter->op)) {
+    if(F_IS_STROP(filter)) {
         filter->valstr = sub_trim(start, str - start);
-        if (filter->valstr && F_IS_PEGOP(filter->op)) {
+        if (filter->valstr && F_IS_PEGOP(filter)) {
             filter->reg = (regex_t *)malloc(sizeof(regex_t));
             if (regcomp(filter->reg, filter->valstr, REG_EXTENDED)) {
                 regfree(filter->reg);
@@ -106,12 +99,29 @@ unsigned int parse_filter(Filter *filter, const char *str) {
                 filter->reg = 0;
             }
         }
-    } else {
+
+        switch (guessType(filter->valstr))  {
+            case TYPE_LONG:
+            case TYPE_DOUBLE:
+                filter->type |= F_OPT_NUMVAL;
+                break;
+            default:break;
+        }
+
+    }
+    if (F_IS_NUMOP(filter)) {
+        start = sub_trim(start, str - start);
+        if (start) {
+            filter->vallong = atoll(start);
+            filter->valdbl = atof(start);
+            free(start);
+        }
+    } else  {
         if (filter->key) filter->op = F_OP_KEY;
     }
 
     if (strstr(filter->key, CJSON_PATH_DELIMITER))
-        filter->op |= F_OPT_JSONKEY;
+        filter->type |= F_OPT_JSONKEY;
 
     return filter->op;
 }

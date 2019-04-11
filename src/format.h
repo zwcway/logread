@@ -82,14 +82,17 @@ typedef struct Log_field {
 typedef struct Log_time {
     time_t ts;
     char *str;
+    Highlight *hl;
 } Log_time;
 typedef struct Log_host {
     in_addr_t lip;
     char *ip;
+    Highlight *hl;
 } Log_host;
 typedef struct Log_level {
     unsigned char lint;
     char *lstr;
+    Highlight *hl;
 } Log_level;
 /**
  * 日志

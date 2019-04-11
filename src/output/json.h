@@ -7,7 +7,8 @@
 
 #include "format.h"
 #include "cJSON.h"
+#include "output.h"
 
-extern int print_log_to_json(char **, const Log *, int);
+extern int print_log_to_json(OutputBuffer*, const Log *, int);
 
 #endif //LOGR_JSON_H

@@ -57,7 +57,7 @@ inline static const char* fetch_color(const char *__name, const char *__default)
  * @param __val
  * @param print_space
  */
-void sprtf_key_val (char **__str, const char *__key, const char *__val, const bool print_space) {
+void sprtf_key_val (OutputBuffer*__str, const char *__key, const char *__val, const bool print_space) {
     if (color_option) {
         const char *color = NULL;
 
@@ -94,13 +94,13 @@ void sprtf_key_val (char **__str, const char *__key, const char *__val, const bo
     if (print_space) SPRTF_STR(__str, logr_spc);
 }
 
-extern void sprtf_hl (const char *__buf, char **__str, int __len, const char *__key, Highlight *hl) {
+extern void sprtf_hl (OutputBuffer *__str, const char *__key, const Highlight *hl) {
     if (color_option) {
         if (highlight_color) {
             if (hl->pre)
-                SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), field_val_color, hl->pre);
-            SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), highlight_color, hl->str);
-            SPRTF_STR_CBUF(__str, __len - ((*__str) - __buf), field_val_color, hl->app);
+                SPRTF_STR_CBUF(__str, field_val_color, hl->pre);
+            SPRTF_STR_CBUF(__str, highlight_color, hl->str);
+            SPRTF_STR_CBUF(__str, field_val_color, hl->app);
             return;
         }
     }

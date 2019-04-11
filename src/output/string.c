@@ -10,54 +10,20 @@
 /**
  * 字符串缓存
  */
-static char str_buffer[MAX_LINE];
+static OutputBuffer str_buffer;
 
 /**
  * 输出JSON至缓存
  * TODO 支持JSON高亮
- * TODO 不使用递归
  * @param __output
  * @param json
  */
-void print_json_to_str(char **__output, cJSON *json) {
+void print_json_to_str(OutputBuffer *__output, cJSON *json) {
     if (!json) return;
-
-    for(; json ; json = json->next) {
-        switch (json->type) {
-            case cJSON_String:
-                /* TODO 使用 @see cJSON_PrintBuffered 格式化处理转义字符、编码等等 */
-                if (json->string) P_STRQJ_BUF(__output, json->string);
-                P_STRQ_BUF(__output, json->valuestring);
-                break;
-            case cJSON_Number:
-                if (json->string) P_STRQJ_BUF(__output, json->string);
-                P_STR_BUF(__output, json->valuestring);
-                break;
-            case cJSON_False:
-            case cJSON_True:
-                if (json->string) P_STRQJ_BUF(__output, json->string);
-                P_STR_BUF(__output, json->valueint ? "true" : "false");
-                break;
-            case cJSON_NULL:
-                if (json->string) P_STRQJ_BUF(__output, json->string);
-                P_STR_BUF(__output, "NULL");
-                break;
-            case cJSON_Object:
-                if (json->string) P_STRQJ_BUF(__output, json->string);
-                P_STR_BUF(__output, "{");
-                print_json_to_str(__output, json->child);
-                P_STR_BUF(__output, "}");
-                break;
-            case cJSON_Array:
-                P_STR_BUF(__output, "[");
-                print_json_to_str(__output, json->child);
-                P_STR_BUF(__output, "]");
-                break;
-            default:
-                break;
-        }
-
-        if (json->next) P_STR_BUF(__output, ",");
+    char *buffer = cJSON_PrintBuffered(json, (int)PRINTF_LENGTH(__output), 0);
+    if (buffer) {
+        P_STR_BUF(__output, buffer);
+        free(buffer);
     }
 }
 /**
@@ -66,9 +32,9 @@ void print_json_to_str(char **__output, cJSON *json) {
  * @param __output
  * @param field
  */
-void print_str_field(char **__output, const Log_field *field) {
+void print_str_field(OutputBuffer *__output, const Log_field *field) {
     // 先将所有字符打印至一个缓存中
-    char *val = str_buffer;
+    OT_BUF_INIT(&str_buffer);
 
     switch (field->type) {
         case TYPE_LONG:
@@ -76,36 +42,46 @@ void print_str_field(char **__output, const Log_field *field) {
         case TYPE_STRING:
         case TYPE_IP:
             if (field->hl) {
-                sprtf_hl(str_buffer, &val, MAX_LINE, field->valstr->valstring, field->hl);
+                sprtf_hl(&str_buffer, field->valstr->valstring, field->hl);
             } else {
-                P_STR_BUF(&val, field->valstr->valstring);
+                P_STR_BUF(&str_buffer, field->valstr->valstring);
             }
             break;
         case TYPE_JSON:
             if (field->hl) {
-                sprtf_hl(str_buffer, &val, MAX_LINE, field->valstr->valstring, field->hl);
+                sprtf_hl(&str_buffer, field->valstr->valstring, field->hl);
             } else {
-                print_json_to_str(&val, field->valjson);
+                print_json_to_str(&str_buffer, field->valjson);
             }
             break;
-        default:break;
+        default:
+            return;
     }
 
-    P_STR(__output, field->key, str_buffer);
+    P_STR(__output, field->key, str_buffer.outputstr);
+}
+
+void print_log_highlight(OutputBuffer *__output, const char *key, const char *val, const Highlight *hl) {
+    if (hl) {
+        OT_BUF_INIT(&str_buffer);
+        sprtf_hl(&str_buffer, val, hl);
+        P_STR(__output, key, str_buffer.outputstr);
+    } else
+        P_STR(__output, key, val);
 }
 
 int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, const int opt) {
-    char **__output = (char **)arg;
+    OutputBuffer *__output = (OutputBuffer *)arg;
     int count = 0, isPrinted = 0;
     Log_field *field = log->value;
 
     if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
-        P_STR(__output, COL_HOST, log->host->ip);
+        print_log_highlight(__output, COL_HOST, log->host->ip, log->host->hl);
         count++;
     }
 
     if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
-        P_STR(__output, COL_LEVEL, log->level->lstr);
+        print_log_highlight(__output, COL_LEVEL, log->level->lstr, log->level->hl);
         count++;
     }
 
@@ -119,7 +95,7 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
         count++;
     }
     if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
-        P_STR(__output, COL_TIME, log->time->str);
+        print_log_highlight(__output, COL_TIME, log->time->str, log->time->hl);
         count++;
     }
 
@@ -140,14 +116,14 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     return count;
 }
 
-int print_log_to_str(char **__output, const Log *log) {
+int print_log_to_str(OutputBuffer *__output, const Log *log) {
     int count = 0, opt = 0;
 
     count = filter_column_callback(__output, log, opt, print_log_to_str_column);
 
     // 去掉末尾的空格
-    if (is_spc((*__output) - 1)) {
-        *((*__output) - 1) = '\0';
+    if (is_spc(__output->outputstr - 1)) {
+        *(__output->outputstr - 1) = '\0';
     }
 
     return count;
