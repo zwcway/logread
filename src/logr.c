@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "logr.h"
 #include "filter.h"
@@ -189,13 +190,14 @@ int ParseArg(int argc, char *argv[]) {
     else
         ReadPipe(outputtype);
 
-    format_free();
-    filter_free();
-    color_dict_free();
-
     return 1;
 }
 
+void onExit() {
+    format_free();
+    filter_free();
+    color_dict_free();
+}
 /**
  * 从文件中读取日志
  */
@@ -233,7 +235,18 @@ void ReadPipe(const int outputtype) {
         format(buftrans_in, ++count, outputtype);
 }
 
+void intHandler(int dummy) {
+    onExit();
+}
 
 int main(int argc, char *argv[]) {
+    struct sigaction sa;
+    sa.sa_handler = intHandler;
+    sigaction(SIGINT, &sa, NULL);
+
     ParseArg(argc, argv);
+
+    onExit();
+
+    return 0;
 }
