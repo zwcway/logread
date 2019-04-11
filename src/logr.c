@@ -25,6 +25,13 @@ bool debug_flag = false;
 void ReadLine(int);
 void ReadPipe(int);
 
+void onExit(int no) {
+    format_free();
+    filter_free();
+    color_dict_free();
+    exit(no);
+}
+
 void PrintHelp(char *prog) {
     printf("用法: %s [参数]... [文件]...\n", prog);
     printf("格式化日志。版本号：%s\n", VERSION);
@@ -151,17 +158,17 @@ int ParseArg(int argc, char *argv[]) {
 
     if (helpflg || errflg) {
         PrintHelp(PROGRAM);
-        exit(0);
+        onExit(0);
     }
     if (verflg) {
         PrintVersion(PROGRAM);
-        exit(0);
+        onExit(0);
     }
 
     // 剩余参数认为是文件
     if (argc - optind > MAX_LOGFILE) {
         printf("文件过多，最多支持 %d 个文件。", MAX_LOGFILE);
-        exit(1);
+        onExit(1);
     }
     int i = 0, index = 0;
     int errCnt = 0;
@@ -178,7 +185,7 @@ int ParseArg(int argc, char *argv[]) {
                 fclose(logfileList[i]);
             }
         }
-        exit(1);
+        onExit(1);
     }
 
     parse_logr_colors();
@@ -193,11 +200,6 @@ int ParseArg(int argc, char *argv[]) {
     return 1;
 }
 
-void onExit() {
-    format_free();
-    filter_free();
-    color_dict_free();
-}
 /**
  * 从文件中读取日志
  */
@@ -236,7 +238,7 @@ void ReadPipe(const int outputtype) {
 }
 
 void intHandler(int dummy) {
-    onExit();
+    onExit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -246,7 +248,5 @@ int main(int argc, char *argv[]) {
 
     ParseArg(argc, argv);
 
-    onExit();
-
-    return 0;
+    onExit(0);
 }
