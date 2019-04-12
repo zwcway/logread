@@ -19,6 +19,14 @@ static Formater formaters[] = {
 };
 static int formaterlen = 0;
 
+void field_hl(Highlight * hl) {
+    if (hl) {
+        if (hl->pre) free(hl->pre);
+        if (hl->str) free(hl->str);
+        if (hl->app) free(hl->app);
+        free(hl);
+    }
+}
 
 void field_free(Log_field *f) {
     Log_field *next;
@@ -39,12 +47,7 @@ void field_free(Log_field *f) {
             f->valstr = 0;
         }
 
-        if (f->hl) {
-            free(f->hl->pre);
-            free(f->hl->str);
-            free(f->hl->app);
-            free(f->hl);
-        }
+        field_hl(f->hl);
         free(f->key);
         f->key = 0;
 
@@ -78,21 +81,26 @@ void log_free(Log *log) {
 
     if (log->level) {
         if (log->level->lstr) free(log->level->lstr);
+        field_hl(log->level->hl);
         free(log->level);
     }
     if (log->time) {
         if (log->time->str) free(log->time->str);
+        field_hl(log->time->hl);
         free(log->time);
     }
-    if (log->logidstr) {
-        free(log->logidstr);
-    }
+    if (log->logidstr) free(log->logidstr);
+    field_hl(log->lhl);
+
     if (log->host) {
         if (log->host->ip) free(log->host->ip);
+        field_hl(log->host->hl);
         free(log->host);
     }
     if (log->file) free(log->file);
+    field_hl(log->fhl);
     if (log->extra) free(log->extra);
+    field_hl(log->ehl);
 
     if (log->value) field_free(log->value);
 }
@@ -126,7 +134,10 @@ int parse_field(Log_field *field, char *tmp) {
             if(tmp) free(tmp);
             break;
     }
-    L_SET_TYPE(field, valtype); \
+    L_SET_TYPE(field, valtype);
+    if (valtype != TYPE_NULL) {
+        L_INIT_HIGHLIGHT(field->hl);
+    }
 
     return valtype;
 }
@@ -141,7 +152,6 @@ void format(const char *line, const unsigned long lineno, const int outputtype) 
         colCnt = formaters[i].procerfunc(&log, line, lineno);
         // 处理成功后跳出循环
         if (colCnt != FORMATER_FAILED) break;
-        log_free(&log);
     }
 
     if (FORMATER_FAILED == colCnt)

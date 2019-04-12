@@ -118,24 +118,24 @@ int striright(const char *__haystack, const char *__needle) {
 
 char *stristr(const char *str1, const char *str2) {
     char *cp = (char *) str1;
-    char *s1;
+    char *s1, *s2;
     int ch1, ch2;
 
     if (is_eof(str2)) return ((char *) str1);
 
-    while (*cp) {
+    while (!is_eof(cp)) {
         s1 = cp;
-
-        while (*s1 && *str2) {
-            ch1 = *s1; ch2 = *str2;
+        s2 = (char*)str2;
+        while (*s1 && *s2) {
+            ch1 = *s1; ch2 = *s2;
             if (isascii(ch1) && isupper(ch1)) ch1 = tolower(ch1);
-            if (isascii(*str2) && isupper(*str2)) ch2 = tolower(*str2);
+            if (isascii(ch2) && isupper(ch2)) ch2 = tolower(ch2);
 
-            if (ch1 - ch2 == 0) s1++, str2++;
+            if (ch1 - ch2 == 0)
+                s1++, s2++;
             else break;
+            if (is_eof(s2)) return (cp);
         }
-
-        if (is_eof(str2)) return (cp);
         cp++;
     }
 

@@ -12,6 +12,16 @@
  */
 static OutputBuffer str_buffer;
 
+
+void print_log_highlight(OutputBuffer *__output, const char *key, const char *val, const Highlight *hl) {
+    if (HAS_HIGHLIGHT(hl)) {
+        OT_BUF_INIT(&str_buffer);
+        sprtf_hl(&str_buffer, val, hl);
+        P_STR(__output, key, str_buffer.outputstr);
+    } else
+        P_STR(__output, key, val);
+}
+
 /**
  * 输出JSON至缓存
  * TODO 支持JSON高亮
@@ -26,6 +36,7 @@ void print_json_to_str(OutputBuffer *__output, cJSON *json) {
         free(buffer);
     }
 }
+
 /**
  * 打印一个字段
  *
@@ -41,14 +52,14 @@ void print_str_field(OutputBuffer *__output, const Log_field *field) {
         case TYPE_DOUBLE:
         case TYPE_STRING:
         case TYPE_IP:
-            if (field->hl) {
+            if (HAS_HIGHLIGHT(field->hl)) {
                 sprtf_hl(&str_buffer, field->valstr->valstring, field->hl);
             } else {
                 P_STR_BUF(&str_buffer, field->valstr->valstring);
             }
             break;
         case TYPE_JSON:
-            if (field->hl) {
+            if (HAS_HIGHLIGHT(field->hl)) {
                 sprtf_hl(&str_buffer, field->valstr->valstring, field->hl);
             } else {
                 print_json_to_str(&str_buffer, field->valjson);
@@ -59,15 +70,6 @@ void print_str_field(OutputBuffer *__output, const Log_field *field) {
     }
 
     P_STR(__output, field->key, str_buffer.outputstr);
-}
-
-void print_log_highlight(OutputBuffer *__output, const char *key, const char *val, const Highlight *hl) {
-    if (hl) {
-        OT_BUF_INIT(&str_buffer);
-        sprtf_hl(&str_buffer, val, hl);
-        P_STR(__output, key, str_buffer.outputstr);
-    } else
-        P_STR(__output, key, val);
 }
 
 int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, const int opt) {
@@ -86,12 +88,12 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     }
 
     if (F_SUCC == filter_column(col, COL_LOGID)) {
-        P_STR(__output, COL_LOGID, log->logidstr);
+        print_log_highlight(__output, COL_LOGID, log->logidstr, log->lhl);
         count++;
     }
 
     if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
-        P_STR(__output, COL_FILE, log->file);
+        print_log_highlight(__output, COL_FILE, log->file, log->fhl);
         count++;
     }
     if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {

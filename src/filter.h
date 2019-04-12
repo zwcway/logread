@@ -160,15 +160,12 @@ extern Log_field*  filter_fieldcolumn(const Column_list *cur, Log_field *field);
 extern int filter_column(const Column_list *, const char *);
 extern int filter_column_callback(void*, const Log *, int , print_colmn_func);
 
-static void F_HL_P(Highlight **__hl, const char *__str, int __of, int __ln) {
+static void F_HL_P(Highlight *__hl, const char *__str, int __of, int __ln) {
     if (!__hl) return;
 
-    if (!*__hl) {
-        (*(__hl)) = (Highlight *)calloc(1, sizeof(Highlight));
-    }
-    (*(__hl))->pre = sub_str(__str, __of);
-    (*(__hl))->str = sub_str(__str + __of, __ln);
-    (*(__hl))->app = sub_str(__str + __of + __ln, MAX_LINE);
+    if(__of) __hl->pre = sub_str(__str, __of);
+    if(__ln) __hl->str = sub_str(__str + __of, __ln);
+    __hl->app = sub_str(__str + __of + __ln, MAX_LINE);
 }
 
 /**
@@ -232,7 +229,7 @@ static int filter_double(const Filter *filter, const double dbl) {
  * @param hl 返回已匹配的字符串始末指针，可用于高亮
  * @return
  */
-static int filter_string(const Filter *filter, const char *str, Highlight **hl) {
+static int filter_string(const Filter *filter, const char *str, Highlight *hl) {
     if (str == 0) return F_FAIL;
 
     int ret = F_FAIL;
@@ -249,7 +246,7 @@ static int filter_string(const Filter *filter, const char *str, Highlight **hl) 
             return ret;
         // 模糊匹配
         case F_OP_FZ:
-            findstr = strstr(str, filter->valstr);
+            findstr = stristr(str, filter->valstr);
             ret = findstr != 0;
 
             if (color_option && hl && ret)
@@ -259,7 +256,7 @@ static int filter_string(const Filter *filter, const char *str, Highlight **hl) 
         // 正则取反
         case F_OP_NPG: return regexec(filter->reg, str, 1, pmatch, 0) == REG_NOMATCH;
         // 模糊取反
-        case F_OP_NFZ: return strstr(str, filter->valstr) == 0;
+        case F_OP_NFZ: return stristr(str, filter->valstr) == 0;
         case F_OP_EQ:
             ret = strcasecmp(str, filter->valstr) == 0;
 
@@ -367,20 +364,20 @@ static int filter_host(const Filter *filter, Log_host *host) {
     if (!host) return F_FAIL;
 
     if (F_IS_NUM(filter)) return filter_long(filter, host->lip);
-    return filter_string(filter, host->ip, &host->hl);
+    return filter_string(filter, host->ip, host->hl);
 }
 static int filter_level(const Filter *filter, Log_level *level) {
     if (!level) return F_FAIL;
     if (F_IS_NUM(filter)) return filter_long(filter, level->lint);
-    return filter_string(filter, level->lstr, &level->hl);
+    return filter_string(filter, level->lstr, level->hl);
 }
 
 static int filter_field(const Filter *filter, Log_field *field) {
-    if (field == 0) return F_FAIL;
+    if (field == NULL || field->valstr == NULL) return F_FAIL;
 
     if (field->type == TYPE_JSON) {
         if (filter->key && F_IS_TOPT(filter, F_OPT_JSONKEY)) return filter_json(filter, field->valjson);
-        return filter_string(filter, field->valstr->valstring, &field->hl);
+        return filter_string(filter, field->valstr->valstring, field->hl);
     }
 
     if (field->type == TYPE_NULL) {
@@ -393,7 +390,7 @@ static int filter_field(const Filter *filter, Log_field *field) {
         if (field->type == TYPE_LONG) return filter_long(filter, field->valstr->vallong);
     }
     if (F_IS_STR(filter)) {
-        return filter_string(filter, field->valstr->valstring, &field->hl);
+        return filter_string(filter, field->valstr->valstring, field->hl);
     }
 
     return F_FAIL;
@@ -430,7 +427,7 @@ static unsigned filter_key(const Filter *filter, const Log *log) {
 }
 
 /**
- * 是否存在某个值，存在即成功
+ * 任意键名，是否存在某个值，存在即成功
  * @param filter
  * @param log
  * @return
@@ -441,11 +438,13 @@ static int filter_value(const Filter *filter, const Log *log) {
     if (log->host && filter_host(filter, log->host)) return F_SUCC;
     if (log->level && filter_level(filter, log->level)) return F_SUCC;
     if (filter_long(filter, log->logid)) return F_SUCC;
+    if (log->file && filter_string(filter, log->file, log->fhl)) return F_SUCC;
     if (log->time && filter_time(filter, log->time)) return F_SUCC;
-    if (log->extra && filter_string(filter, log->extra, 0)) return F_SUCC;
 
     for(;field;field=field->next)
         if (filter_field(filter, field)) return F_SUCC;
+
+    if (log->extra && filter_string(filter, log->extra, log->ehl)) return F_SUCC;
 
     return F_FAIL;
 }
@@ -475,15 +474,17 @@ static int filter_log(const Log *log) {
                 return F_FAIL;
             if (0 == strcasecmp(ff->key, COL_LOGID) && !filter_long(ff, log->logid))
                 return F_FAIL;
-            if (0 == strcasecmp(ff->key, COL_TIME) && !filter_time(ff, log->time))
+            if (0 == strcasecmp(ff->key, COL_FILE) && !filter_string(ff, log->file, log->fhl))
                 return F_FAIL;
-            if (0 == strcasecmp(ff->key, COL_EXTRA) && !filter_string(ff, log->extra, 0))
+            if (0 == strcasecmp(ff->key, COL_TIME) && !filter_time(ff, log->time))
                 return F_FAIL;
 
             for (;field;field=field->next)
                 if (field->key && 0 == strcasecmp(ff->key, field->key) && !filter_field(ff, field))
                     return F_FAIL;
 
+            if (0 == strcasecmp(ff->key, COL_EXTRA) && !filter_string(ff, log->extra, log->ehl))
+                return F_FAIL;
         } else {
             // 仅仅校验值是否存在，如果有一个条件不存在，就表示匹配失败（过滤成功）
             if (!filter_value(ff, log))

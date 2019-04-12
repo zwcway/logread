@@ -105,11 +105,14 @@ typedef struct Log {
     Log_time *time;
     /** 调用文件 */
     char *file;
+    Highlight *fhl;
     /** 日志id */
     long long logid;
     char * logidstr;
+    Highlight *lhl;
     /** 其他扩展字符串 */
     char *extra;
+    Highlight *ehl;
     /** 链表 */
     Log_field *value;
     const char *line;
@@ -158,37 +161,61 @@ FORMATER_DESTORY_FUNCNAME(name) \
 #define L_SET_INT(field)        L_SET_TYPE(field, TYPE_INT)
 #define L_SET_JSON(field)       L_SET_TYPE(field, TYPE_JSON)
 
-#define L_INIT_LOG(log)   do { \
-(log)->level = 0; \
-(log)->host = 0; \
-(log)->time = 0; \
-(log)->file = 0; \
-(log)->logid = 0; \
-(log)->logidstr = 0; \
-(log)->extra = 0; \
-(log)->value = 0; \
-(log)->pos = 0; \
+#define L_INIT_HIGHLIGHT(__hl) do { \
+if (NULL == __hl) { \
+    __hl = (Highlight *)malloc(sizeof(Highlight)); \
+} \
+if (NULL != __hl) { \
+    (__hl)->pre = NULL; \
+    (__hl)->app = NULL; \
+    (__hl)->str = NULL; \
+} \
 } while(0)
 
 #define L_INIT_FIELD(field)    do { \
 (field) = (Log_field *)calloc(1, sizeof(Log_field)); \
+if (NULL!=field) L_INIT_HIGHLIGHT((field)->hl); \
 }while(0)
 
 #define L_INIT_VALUE(field)  do { \
-(field)->valstr = (Log_value *)calloc(1, sizeof(Log_value)); \
+if(NULL!=field) (field)->valstr = (Log_value *)calloc(1, sizeof(Log_value));\
 }while(0)
 
 #define L_INIT_HOST(log)  do { \
 (log)->host = (Log_host *)calloc(1, sizeof(Log_host)); \
+if (NULL != (log)->host) L_INIT_HIGHLIGHT((log)->host->hl); \
 }while(0)
 
 #define L_INIT_TIME(log)  do { \
 (log)->time = (Log_time *)calloc(1, sizeof(Log_time)); \
+if (NULL != (log)->time) L_INIT_HIGHLIGHT((log)->time->hl); \
 }while(0)
 
 #define L_INIT_LEVEL(log)  do { \
 (log)->level = (Log_level *)calloc(1, sizeof(Log_level)); \
+if (NULL != (log)->level) L_INIT_HIGHLIGHT((log)->level->hl); \
 }while(0)
+
+#define L_INIT_LOG(log)   do { \
+if (NULL == log) break; \
+(log)->level = NULL; \
+(log)->host = NULL; \
+(log)->time = NULL; \
+(log)->file = NULL; \
+(log)->logid = 0; \
+(log)->logidstr = NULL; \
+(log)->extra = NULL; \
+(log)->value = NULL; \
+(log)->pos = 0; \
+(log)->fhl = NULL; \
+(log)->lhl = NULL; \
+(log)->ehl = NULL; \
+L_INIT_HIGHLIGHT((log)->fhl); \
+L_INIT_HIGHLIGHT((log)->lhl); \
+L_INIT_HIGHLIGHT((log)->ehl); \
+} while(0)
+
+#define HAS_HIGHLIGHT(__hl)   ((NULL != __hl) && ((__hl)->pre != NULL || (__hl)->str != NULL || (__hl)->app != NULL))
 
 #define LF_LONG(field, tmp) do { \
 L_INIT_VALUE(field); \

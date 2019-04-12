@@ -20,6 +20,7 @@ typedef struct OutputBuffer {
 
 
 #define OT_BUF_INIT(__buf)  do { \
+    *(__buf)->outputstr = 0; \
     (__buf)->offset = 0; \
     (__buf)->length = MAX_LINE; \
 } while(0)

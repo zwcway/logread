@@ -120,7 +120,7 @@ unsigned int parse_filter(Filter *filter, const char *str) {
         if (filter->key) filter->op = F_OP_KEY;
     }
 
-    if (strstr(filter->key, CJSON_PATH_DELIMITER))
+    if (filter->key && strstr(filter->key, CJSON_PATH_DELIMITER))
         filter->type |= F_OPT_JSONKEY;
 
     return filter->op;
