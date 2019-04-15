@@ -18,28 +18,38 @@ ENDIF ()
 
 ADD_DEFINITIONS(-D_GNU_SOURCE)
 
+
+
+SET(OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+SET(OUTPUT_DIR ${PROJECT_SOURCE_DIR}/parser)
+
 # bion 语法分析
-#FIND_PACKAGE(BISON REQUIRED)
-#SET(BisonOutput ${CMAKE_CURRENT_BINARY_DIR}/bison.c)
-#IF(BISON_FOUND)
-#    BISON_TARGET(Parser src/parser/logr.y ${BisonOutput})
-#ENDIF()
+FIND_PACKAGE(BISON REQUIRED)
+SET(BisonOutput ${OUTPUT_DIR}/bison.c)
+IF(NOT BISON_FOUND)
+    MESSAGE(FATAL_ERROR "bison does not found")
+ENDIF()
+BISON_TARGET(Parser parser/logr.y ${BisonOutput})
 
 # flex 词法分析
-#FIND_PACKAGE(FLEX REQUIRED)
-#SET(FlexOutput ${CMAKE_CURRENT_BINARY_DIR}/flex.c)
-#IF(FLEX_FOUND)
-#    FLEX_TARGET(Scanner src/parser/logr.l  ${FlexOutput})
-##    ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
-#    ADD_EXECUTABLE(flex
-#            ${BISON_Parser_OUTPUTS}
-#            ${FLEX_Scanner_OUTPUTS}
-#            )
-#ENDIF()
+FIND_PACKAGE(FLEX REQUIRED)
+IF(NOT FLEX_FOUND)
+    MESSAGE(FATAL_ERROR "flex does not found")
+ENDIF()
+SET(FlexOutput ${OUTPUT_DIR}/app.c)
+FLEX_TARGET(APP_Scanner parser/app.l ${FlexOutput})
+ADD_FLEX_BISON_DEPENDENCY(APP_Scanner Parser)
+ADD_EXECUTABLE(flex-app
+        lib/memcpy.c
+        ${BISON_Parser_OUTPUTS}
+        ${FLEX_APP_Scanner_OUTPUTS}
+        )
+
 
 INCLUDE_DIRECTORIES(
         lib/
         src/
+        parser/
 )
 
 FILE(GLOB_RECURSE DIR_SRCS lib/*.c src/*.c)

@@ -140,3 +140,5 @@ dkms.conf
 bin/
 *.cbp
 *.zip
+parser/*.c
+parser/*.h
