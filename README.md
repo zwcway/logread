@@ -1,0 +1,1 @@
+使用方式参见【[logr使用说明](http://wiki.afpai.com/pages/viewpage.action?pageId=29165796)】
