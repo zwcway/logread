@@ -48,6 +48,8 @@ void PrintHelp(char *prog) {
     printf("	                     extra(其他)        : %s\n", COL_EXTRA);
     printf("\n");
     printf("  -C                   同 -c|--column 。所有列必须同时存在。\n");
+    printf("  -K                   只输出值不输出字段名称。\n"); // TODO
+    printf("  -d                   输出字段分隔符。\n"); // TODO
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
     printf("                         key*val   指定字段中，任意位置模糊查找\n");
