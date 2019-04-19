@@ -118,7 +118,7 @@ FORMATER_DESTORY_FUNC(ral) {
 FORMATER_INIT_FUNC(ral) {
     reg_ral = (regex_t *)malloc(sizeof(regex_t));
     if (regcomp(reg_ral,
-                "^(([0-9]+\\.){3}[0-9]+: )?(NOTICE|WARNING|TRACE): [01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2}:  ral(-worker)? \\* [0-9]+ \\[([0-9a-zA-Z_/\\.]+\\.cpp:[0-9]+)\\]",
+                "^(([0-9]+\\.){3}[0-9]+: )?(NOTICE|WARNING|TRACE): [01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2}:  ral(-worker)? \\* [0-9]+ \\[([0-9a-zA-Z_/\\.-]+\\.cpp:[0-9]+)\\]",
                 REG_EXTENDED)) {
         regfree(reg_ral);
         free(reg_ral);
