@@ -142,7 +142,7 @@ int parse_field(Log_field *field, char *tmp) {
     return valtype;
 }
 
-void format(const char *line, const unsigned long lineno, const int outputtype) {
+void format(const char *line, const unsigned long lineno) {
     int colCnt = 0;
     Log log;
 
@@ -157,7 +157,7 @@ void format(const char *line, const unsigned long lineno, const int outputtype) 
     if (FORMATER_FAILED == colCnt)
         printf("%s", line);
     else
-        print_log(&log, outputtype);
+        print_log(&log, output_type, output_option);
 
     log_free(&log);
 }

@@ -258,7 +258,7 @@ void format_free(void);
 void field_free(Log_field *f);
 Log_field* field_duplicate(Log_field *f);
 
-void format(const char *, unsigned long, int);
+void format(const char *, unsigned long);
 
 /**
  * 取子字符串，并支持删除两边空格

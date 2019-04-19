@@ -21,9 +21,15 @@ static struct stat out_stat;
 int color_option = 0;
 bool dev_null_output = false;
 bool debug_flag = false;
+int output_type = 0;
+int output_option = 0;
+char *logr_op = "=";
+char *logr_spc = " ";
 
-void ReadLine(int);
-void ReadPipe(int);
+static bool use_file = false;
+
+void ReadLine();
+void ReadPipe();
 
 void onExit(int no) {
     format_free();
@@ -48,8 +54,8 @@ void PrintHelp(char *prog) {
     printf("	                     extra(其他)        : %s\n", COL_EXTRA);
     printf("\n");
     printf("  -C                   同 -c|--column 。所有列必须同时存在。\n");
-    printf("  -K                   只输出值不输出字段名称。\n"); // TODO
-    printf("  -d                   输出字段分隔符。\n"); // TODO
+    printf("  -K                   只输出值不输出字段名称。\n");
+    printf("  -d                   每个字段之间的分隔符。\n");
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
     printf("                         key*val   指定字段中，任意位置模糊查找\n");
@@ -89,20 +95,21 @@ void PrintVersion(char *prog) {
  */
 int ParseArg(int argc, char *argv[]) {
     int c;
-    int helpflg = 0, verflg = 0, errflg = 0, outputtype = OUTPUT_STRING;
+    int helpflg = 0, verflg = 0, errflg = 0;
+    output_type = OUTPUT_STRING;
 
     struct option longopts[] =
             {
                     {"column", required_argument,   0,              'c'},
                     {"filter", required_argument,   0,              'f'},
                     {"help",   no_argument,         &helpflg,       'h'},
-                    {"json",   no_argument,         &outputtype,    'j'},
+                    {"json",   no_argument,         0,              'j'},
                     {"version",no_argument,         &verflg,        'v'},
                     {"debug"  ,no_argument,         0,              DEBUG_OPTION},
                     {0,        0,                   0,              0}
             };
 
-    while ((c = getopt_long(argc, argv, "hvjJC:f:c:", longopts, NULL)) != EOF) {
+    while ((c = getopt_long(argc, argv, "hvjJC:f:c:Kd:", longopts, NULL)) != EOF) {
         switch (c) {
             case 'h':
                 helpflg = 1;
@@ -119,11 +126,17 @@ int ParseArg(int argc, char *argv[]) {
             case 'v':
                 verflg = 1;
                 break;
+            case 'd':
+                logr_spc = optarg;
+                break;
             case 'j':
-                outputtype = OUTPUT_JSON;
+                output_type = OUTPUT_JSON;
                 break;
             case 'J':
-                outputtype = OUTPUT_JSON_NOREC;
+                output_type = OUTPUT_JSON_NOREC;
+                break;
+            case 'K':
+                output_option |= OUTPUT_OPT_NOKEY;
                 break;
             case DEBUG_OPTION:
                 debug_flag = true;
@@ -175,6 +188,7 @@ int ParseArg(int argc, char *argv[]) {
     int i = 0, index = 0;
     int errCnt = 0;
     for (i = optind; i < argc; i++) {
+        use_file = true;
         index = i - optind;
         if (! (logfileList[index] = fopen(argv[i], "r"))) {
             printf("文件打开失败 %s\n", argv[i]);
@@ -182,22 +196,13 @@ int ParseArg(int argc, char *argv[]) {
         }
     }
     if (errCnt > 0) {
-        for (int j = 0; j < MAX_LOGFILE; ++j) {
-            if (logfileList[i]) {
+        for (i = 0; i < MAX_LOGFILE; ++i) {
+            if (NULL != logfileList[i]) {
                 fclose(logfileList[i]);
             }
         }
         onExit(1);
     }
-
-    parse_logr_colors();
-
-    format_init();
-
-    if (i > optind)
-        ReadLine(outputtype);
-    else
-        ReadPipe(outputtype);
 
     return 1;
 }
@@ -205,7 +210,7 @@ int ParseArg(int argc, char *argv[]) {
 /**
  * 从文件中读取日志
  */
-void ReadLine(const int outputtype) {
+void ReadLine() {
     char linebuf[MAX_LINE + 1];
     int nullCnt = 0;
     int i = 0, openedCnt = 0;
@@ -217,7 +222,7 @@ void ReadLine(const int outputtype) {
             if (NULL != logfileList[i]) {
                 openedCnt++;
                 if (fgets(linebuf, MAX_LINE, logfileList[i])) {
-                    format(linebuf, ++line, outputtype);
+                    format(linebuf, ++line);
                 } else {
                     fclose(logfileList[i]);
                     logfileList[i] = NULL;
@@ -231,12 +236,12 @@ void ReadLine(const int outputtype) {
 /**
  * 从管道中读取日志
  */
-void ReadPipe(const int outputtype) {
+void ReadPipe() {
     char buftrans_in[MAX_LINE + 1];
     unsigned long count = 0;
 
     while (fgets(buftrans_in , MAX_LINE , stdin))
-        format(buftrans_in, ++count, outputtype);
+        format(buftrans_in, ++count);
 }
 
 void intHandler(int dummy) {
@@ -249,6 +254,17 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &sa, NULL);
 
     ParseArg(argc, argv);
+
+
+    parse_logr_colors();
+
+    format_init();
+
+    if (use_file)
+        ReadLine();
+    else
+        ReadPipe();
+
 
     onExit(0);
 }

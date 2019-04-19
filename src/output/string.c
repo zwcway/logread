@@ -13,13 +13,13 @@
 static OutputBuffer str_buffer;
 
 
-void print_log_highlight(OutputBuffer *__output, const char *key, const char *val, const Highlight *hl) {
+void print_log_highlight(OutputBuffer *__output, const char *key, const char *val, const Highlight *hl, const int opt) {
     if (HAS_HIGHLIGHT(hl)) {
         OT_BUF_INIT(&str_buffer);
         sprtf_hl(&str_buffer, val, hl);
-        P_STR(__output, key, str_buffer.outputstr);
+        P_STR(__output, key, str_buffer.outputstr, opt);
     } else
-        P_STR(__output, key, val);
+        P_STR(__output, key, val, opt);
 }
 
 /**
@@ -43,7 +43,7 @@ void print_json_to_str(OutputBuffer *__output, cJSON *json) {
  * @param __output
  * @param field
  */
-void print_str_field(OutputBuffer *__output, const Log_field *field) {
+void print_str_field(OutputBuffer *__output, const Log_field *field, const int opt) {
     // 先将所有字符打印至一个缓存中
     OT_BUF_INIT(&str_buffer);
 
@@ -69,7 +69,7 @@ void print_str_field(OutputBuffer *__output, const Log_field *field) {
             return;
     }
 
-    P_STR(__output, field->key, str_buffer.outputstr);
+    P_STR(__output, field->key, str_buffer.outputstr, opt);
 }
 
 int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, const int opt) {
@@ -78,48 +78,49 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     Log_field *field = log->value;
 
     if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
-        print_log_highlight(__output, COL_HOST, log->host->ip, log->host->hl);
+        print_log_highlight(__output, COL_HOST, log->host->ip, log->host->hl, opt);
         count++;
     }
 
     if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
-        print_log_highlight(__output, COL_LEVEL, log->level->lstr, log->level->hl);
+        print_log_highlight(__output, COL_LEVEL, log->level->lstr, log->level->hl, opt);
         count++;
     }
 
     if (F_SUCC == filter_column(col, COL_LOGID)) {
-        print_log_highlight(__output, COL_LOGID, log->logidstr, log->lhl);
+        print_log_highlight(__output, COL_LOGID, log->logidstr, log->lhl, opt);
+        count++;
+    }
+
+    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
+        print_log_highlight(__output, COL_TIME, log->time->str, log->time->hl, opt);
         count++;
     }
 
     if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
-        print_log_highlight(__output, COL_FILE, log->file, log->fhl);
-        count++;
-    }
-    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
-        print_log_highlight(__output, COL_TIME, log->time->str, log->time->hl);
+        print_log_highlight(__output, COL_FILE, log->file, log->fhl, opt);
         count++;
     }
 
     Log_field *field1;
     for(; field; field = field->next) {
         if ((field1 = filter_fieldcolumn(col, field))) {
-            print_str_field(__output, field1);
+            print_str_field(__output, field1, opt);
             if (field1 != field) field_free(field1);
             count++;
         }
     };
 
     if (log->extra && F_SUCC == filter_column(col, COL_EXTRA)) {
-        P_STR(__output, COL_EXTRA, log->extra);
+        P_STR(__output, COL_EXTRA, log->extra, opt);
         count++;
     }
 
     return count;
 }
 
-int print_log_to_str(OutputBuffer *__output, const Log *log) {
-    int count = 0, opt = 0;
+int print_log_to_str(OutputBuffer *__output, const Log *log, const int opt) {
+    int count = 0;
 
     count = filter_column_callback(__output, log, opt, print_log_to_str_column);
 

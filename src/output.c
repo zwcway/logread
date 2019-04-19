@@ -17,7 +17,7 @@ OutputBuffer outputBuffer;
  * @param log
  * @return 已输出的字段数量
  */
-int print_log(const Log *log, int type) {
+int print_log(const Log *log, const int type, const int opt) {
     int count = 0;
 
     OT_BUF_INIT(&outputBuffer);
@@ -26,7 +26,7 @@ int print_log(const Log *log, int type) {
 
     if (F_FAIL != filter_log(log)) {
         if (type == OUTPUT_STRING)
-            count = print_log_to_str(&outputBuffer, log);
+            count = print_log_to_str(&outputBuffer, log, opt);
         else if (type == OUTPUT_JSON)
             count = print_log_to_json(&outputBuffer, log, 1);
         else if (type == OUTPUT_JSON_NOREC)

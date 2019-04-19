@@ -9,8 +9,6 @@
 #include "c-ctype.h"
 
 
-static char *logr_op = "=";
-static char *logr_spc = " ";
 
 /* 内置的基础颜色值变量 */
 static char *field_key_color = C_CYAN;
@@ -57,12 +55,15 @@ inline static const char* fetch_color(const char *__name, const char *__default)
  * @param __val
  * @param print_space
  */
-void sprtf_key_val (OutputBuffer*__str, const char *__key, const char *__val, const bool print_space) {
+bool sprtf_key_val (OutputBuffer*__str, const char *__key, const char *__val, const int opt) {
+    const bool _opt_pkey = (0 == (opt&OUTPUT_OPT_NOKEY));
+    bool isPrinted = false;
+
     if (color_option) {
         const char *color = NULL;
 
         // 拼接全局的颜色处理
-        if (__val) {
+        if (NULL != __val) {
             snprintf(_strbuffer, MAX_BUFFER_SIZE, "%s%s%s", __key, ",", __val);
             color = fetch_color(_strbuffer, 0);
         }
@@ -71,27 +72,49 @@ void sprtf_key_val (OutputBuffer*__str, const char *__key, const char *__val, co
             color = fetch_color(_strbuffer, 0);
         }
 
-        if (NULL != color)
-            SPRTF_STR_COLOR(__str, color, _strbuffer);
-        else {
-            if (field_key_color) SPRTF_STR_COLOR(__str, field_key_color, __key);
-            else SPRTF_STR(__str, __val);
+        if (NULL != color) {
+            if (_opt_pkey) {
+                isPrinted = true;
+                SPRTF_STR_COLOR(__str, color, __key);
+                SPRTF_STR_COLOR(__str, color, logr_op);
+            }
+            if (NULL != __val) {
+                isPrinted = true;
+                SPRTF_STR_COLOR(__str, color, __val);
+            }
+        } else {
+            if (_opt_pkey) {
+                isPrinted = true;
+                if (field_key_color) SPRTF_STR_COLOR(__str, field_key_color, __key);
+                else
+                    SPRTF_STR(__str, __key);
 
-            if (operator_color) SPRTF_STR_COLOR(__str, operator_color, logr_op);
-            else SPRTF_STR(__str, logr_op);
+                if (operator_color) SPRTF_STR_COLOR(__str, operator_color, logr_op);
+                else
+                    SPRTF_STR(__str, logr_op);
+            }
 
-            if (__val) {
+            if (NULL != __val) {
+                isPrinted = true;
                 if (field_val_color) SPRTF_STR_COLOR(__str, field_val_color, __val);
                 else SPRTF_STR(__str, __val);
             }
         }
     } else {
-        SPRTF_STR(__str, __key);
-        SPRTF_STR(__str, logr_op);
-        if (__val) SPRTF_STR(__str, __val);
+        if (_opt_pkey) {
+            isPrinted = true;
+            SPRTF_STR(__str, __key);
+            SPRTF_STR(__str, logr_op);
+        }
+        if (NULL != __val) {
+            isPrinted = true;
+            SPRTF_STR(__str, __val);
+        }
     }
 
-    if (print_space) SPRTF_STR(__str, logr_spc);
+    if ((opt&OUTPUT_OPT_SEPARATOR)) SPRTF_STR(__str, logr_spc);
+
+    return isPrinted;
 }
 
 extern void sprtf_hl (OutputBuffer *__str, const char *__key, const Highlight *hl) {

@@ -89,8 +89,17 @@ unsigned int parse_filter(Filter *filter, const char *str) {
     start = (char *)++str;
     while (!is_end(str)) str++;
 
+    filter->valstr = sub_trim(start, str - start);
+
+    switch (guessType(filter->valstr))  {
+        case TYPE_LONG:
+        case TYPE_DOUBLE:
+            filter->type |= F_OPT_NUMVAL;
+            break;
+        default:break;
+    }
+
     if(F_IS_STROP(filter)) {
-        filter->valstr = sub_trim(start, str - start);
         if (filter->valstr && F_IS_PEGOP(filter)) {
             filter->reg = (regex_t *)malloc(sizeof(regex_t));
             if (regcomp(filter->reg, filter->valstr, REG_EXTENDED)) {
@@ -100,25 +109,15 @@ unsigned int parse_filter(Filter *filter, const char *str) {
             }
         }
 
-        switch (guessType(filter->valstr))  {
-            case TYPE_LONG:
-            case TYPE_DOUBLE:
-                filter->type |= F_OPT_NUMVAL;
-                break;
-            default:break;
-        }
-
     }
     if (F_IS_NUMOP(filter)) {
-        start = sub_trim(start, str - start);
-        if (start) {
-            filter->vallong = atoll(start);
-            filter->valdbl = atof(start);
-            free(start);
+        if (filter->valstr) {
+            filter->vallong = atoll(filter->valstr);
+            filter->valdbl = atof(filter->valstr);
         }
-    } else  {
-        if (filter->key) filter->op = F_OP_KEY;
     }
+    if (filter->key && NULL == filter->valstr)
+        filter->op = F_OP_KEY;
 
     if (filter->key && strstr(filter->key, CJSON_PATH_DELIMITER))
         filter->type |= F_OPT_JSONKEY;

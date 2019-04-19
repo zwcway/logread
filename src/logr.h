@@ -31,6 +31,11 @@ extern bool dev_null_output;
 
 extern bool debug_flag;
 
+extern int output_type;
+extern int output_option;
+
+extern char *logr_op;
+extern char *logr_spc;
 
 /* 没有相应的短命名参数  */
 enum

@@ -30,7 +30,7 @@ void print_json_field(cJSON *__json, const Log_field *field, const int _rec) {
     cJSON_AddItemToObject(__json, field->key, _item);
 }
 
-int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, const int _rec) {
+int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, const int opt) {
     cJSON *__json = (cJSON *)arg;
     int count = 0;
     Log_field *field = log->value;
@@ -68,7 +68,7 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
     Log_field *field1;
     for(; field; field = field->next) {
         if ((field1 = filter_fieldcolumn(col, field))) {
-            print_json_field(__json, field1, _rec);
+            print_json_field(__json, field1, opt);
             if (field1 != field) field_free(field1);
             count++;
         }

@@ -37,8 +37,7 @@
 #define SPRTF_STR_CBUF(__buf, __col, __val)   if (__val) ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), HL_START "%s" HL_END, __col, __val)
 #define SPRTF_STR_BUF(__buf, __fmt, __val)   if (__val) ((__buf)->offset) += snprintf(PRINTF_NEXT(__buf), PRINTF_LENGTH(__buf), __fmt, __val)
 
-
-extern void sprtf_key_val (OutputBuffer *__str, const char *__key, const char *__val, bool print_space);
+extern bool sprtf_key_val (OutputBuffer *__str, const char *__key, const char *__val, int opt);
 
 extern void sprtf_hl (OutputBuffer *__str, const char *__key, const Highlight *hl);
 
