@@ -34,8 +34,8 @@
                                 ":*l,FATAL=" C_LIGHTRED \
                                 ":*time=" C_CYAN \
                                 ":*time.ps_invoke=" C_LIGHTBLUE \
-                                ":*err_no,=" C_LIGHTRED \
-                                ":*err_no,0=" C_DARKGRAY
+                                ":*errno,=" C_LIGHTRED \
+                                ":*errno,0=" C_DARKGRAY
 
 #define PRINTF_LENGTH(__buf)       (MAX_LINE - (__buf)->offset - 1)
 #define PRINTF_NEXT(__buf)         (((__buf)->outputstr) + (__buf)->offset)
