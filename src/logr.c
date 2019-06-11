@@ -31,6 +31,8 @@ static bool use_file = false;
 void ReadLine();
 void ReadPipe();
 
+#define CUNDER(__str)       COLOR(__str, C_UNDERLINE)
+
 void onExit(int no) {
     format_free();
     filter_free();
@@ -38,9 +40,16 @@ void onExit(int no) {
     exit(no);
 }
 
+void PrintVersion(char *prog) {
+    printf("%s 版本号 %s\n", prog, VERSION);
+    printf("项目地址：https://git.afpai.com/zhaoweichen/logread\n");
+}
+
 void PrintHelp(char *prog) {
     printf("用法: %s [参数]... [文件]...\n", prog);
-    printf("格式化日志。版本号：%s\n", VERSION);
+    printf("格式化日志。\n");
+    PrintVersion(prog);
+    printf("\n");
     printf("  -h, --help           显示帮助内容\n");
     printf("\n");
     printf("  -j, --json           输出JSON格式\n");
@@ -53,9 +62,11 @@ void PrintHelp(char *prog) {
     printf("	                     logid(日志ID)      : %s\n", COL_LOGID);
     printf("	                     extra(其他)        : %s\n", COL_EXTRA);
     printf("\n");
-    printf("  -C                   同 -c|--column 。所有列必须同时存在。\n");
+    printf("  -C                   所有列必须同时存在。用法同 %s 。\n", CUNDER("-c|--column"));
     printf("  -K                   只输出值不输出字段名称。\n");
     printf("  -d                   每个字段之间的分隔符。\n");
+    printf("  -t,--table           【TODO】 以表格形式输出。必须同时指定参数 %s\n", CUNDER("-c|-C"));
+    printf("                       同时自动指定参数 %s。\n", CUNDER("-K"));
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
     printf("                         key*val   指定字段中，任意位置模糊查找\n");
@@ -75,15 +86,14 @@ void PrintHelp(char *prog) {
     printf("                         *val      任意字段模糊查找\n");
     printf("                         ~val      正则查找\n");
     printf("\n");
+    printf("环境变量：");
+    printf("LOGR_COLORS            自定义颜色");
+    printf("                       默认值：LOGR_COLORS='%s'", HL_COLORS_DEFAULT);
+    printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000' -f 'uri~^bizas'\n");
     printf("tail -f ral-worker.log | logr -c t -c uri -f 'cost>1000' -f 'uri~^bizas'\n");
     printf("    表示仅显示日志时间和接口地址两列，并且只显示耗时大于1000，并且接口路径以bizas开始的日志\n");
-}
-
-void PrintVersion(char *prog) {
-    printf("%s 版本号 %s\n", prog, VERSION);
-    printf("项目地址：https://git.afpai.com/zhaoweichen/logread\n");
 }
 
 /**
@@ -100,35 +110,41 @@ int ParseArg(int argc, char *argv[]) {
 
     struct option longopts[] =
             {
-                    {"column", required_argument,   0,              'c'},
-                    {"filter", required_argument,   0,              'f'},
-                    {"help",   no_argument,         &helpflg,       'h'},
-                    {"json",   no_argument,         0,              'j'},
-                    {"version",no_argument,         &verflg,        'v'},
-                    {"debug"  ,no_argument,         0,              DEBUG_OPTION},
+                    {"debug"  ,no_argument,         0,              OPTION_DEBUG},
+                    {"help",   no_argument,         &helpflg,       OPTION_HELP},
+                    {"version",no_argument,         &verflg,        OPTION_VERSION},
+                    {"column", required_argument,   0,              OPTION_COLUMN},
+                    {"filter", required_argument,   0,              OPTION_FILTER},
+                    {"json",   no_argument,         0,              OPTION_JSON},
+                    {"table"  ,no_argument,         0,              OPTION_TABLE},
                     {0,        0,                   0,              0}
             };
 
     while ((c = getopt_long(argc, argv, "hvjJC:f:c:Kd:", longopts, NULL)) != EOF) {
         switch (c) {
+            case OPTION_HELP:
             case 'h':
                 helpflg = 1;
                 break;
+            case OPTION_COLUMN:
             case 'c':
                 collect_colmun(optarg, FC_OR);
                 break;
             case 'C':
                 collect_colmun(optarg, FC_AND);
                 break;
+            case OPTION_FILTER:
             case 'f':
                 collect_filter(optarg);
                 break;
+            case OPTION_VERSION:
             case 'v':
                 verflg = 1;
                 break;
             case 'd':
                 logr_spc = optarg;
                 break;
+            case OPTION_JSON:
             case 'j':
                 output_type = OUTPUT_JSON;
                 break;
@@ -138,7 +154,7 @@ int ParseArg(int argc, char *argv[]) {
             case 'K':
                 output_option |= OUTPUT_OPT_NOKEY;
                 break;
-            case DEBUG_OPTION:
+            case OPTION_DEBUG:
                 debug_flag = true;
                 break;
             case '?':
@@ -165,7 +181,7 @@ int ParseArg(int argc, char *argv[]) {
         }
     }
 
-    color_option = debug_flag || (possibly_tty && should_colorize() && isatty(STDOUT_FILENO));
+    color_option = 1;//debug_flag || (possibly_tty && should_colorize() && isatty(STDOUT_FILENO));
 
     if (debug_flag) {
         fprintf(stderr, "possibly_tty: %d dev_null_output:%d color_option:%d\n", possibly_tty, dev_null_output, color_option);
@@ -249,6 +265,8 @@ void intHandler(int dummy) {
 }
 
 int main(int argc, char *argv[]) {
+
+    // 拦截用户终止信号，做善后操作
     struct sigaction sa;
     sa.sa_handler = intHandler;
     sigaction(SIGINT, &sa, NULL);

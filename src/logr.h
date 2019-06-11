@@ -40,7 +40,13 @@ extern char *logr_spc;
 /* 没有相应的短命名参数  */
 enum
 {
-    DEBUG_OPTION = CHAR_MAX + 1,
+    OPTION_DEBUG = CHAR_MAX + 1,
+    OPTION_HELP,
+    OPTION_VERSION,
+    OPTION_COLUMN,
+    OPTION_FILTER,
+    OPTION_JSON,
+    OPTION_TABLE,
 };
 
 #endif
