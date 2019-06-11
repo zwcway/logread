@@ -86,9 +86,9 @@ void PrintHelp(char *prog) {
     printf("                         *val      任意字段模糊查找\n");
     printf("                         ~val      正则查找\n");
     printf("\n");
-    printf("环境变量：");
-    printf("LOGR_COLORS            自定义颜色");
-    printf("                       默认值：LOGR_COLORS='%s'", HL_COLORS_DEFAULT);
+    printf("环境变量：\n");
+    printf("LOGR_COLORS            自定义颜色\n");
+    printf("                       默认值：LOGR_COLORS='%s'\n", HL_COLORS_DEFAULT);
     printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000' -f 'uri~^bizas'\n");
