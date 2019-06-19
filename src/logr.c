@@ -23,8 +23,18 @@ bool dev_null_output = false;
 bool debug_flag = false;
 int output_type = 0;
 int output_option = 0;
+/**
+ * 输出的操作符
+ */
 char *logr_op = "=";
+/**
+ * 输出的分隔符
+ */
 char *logr_spc = " ";
+
+static unsigned int filted_count = 0;
+static unsigned int column_count = 0;
+static bool fail_output = true;
 
 static bool use_file = false;
 
@@ -128,14 +138,14 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case OPTION_COLUMN:
             case 'c':
-                collect_colmun(optarg, FC_OR);
+                column_count += collect_colmun(optarg, FC_OR);
                 break;
             case 'C':
-                collect_colmun(optarg, FC_AND);
+                column_count += collect_colmun(optarg, FC_AND);
                 break;
             case OPTION_FILTER:
             case 'f':
-                collect_filter(optarg);
+                filted_count += collect_filter(optarg);
                 break;
             case OPTION_VERSION:
             case 'v':
@@ -164,6 +174,8 @@ int ParseArg(int argc, char *argv[]) {
                 errflg++;
                 break;
         }
+        // 有任何参数都禁止输出无法识别的日志
+        fail_output = false;
     }
 
     // 检测输出设备，校验设备是否支持颜色
@@ -238,7 +250,7 @@ void ReadLine() {
             if (NULL != logfileList[i]) {
                 openedCnt++;
                 if (fgets(linebuf, MAX_LINE, logfileList[i])) {
-                    format(linebuf, ++line);
+                    format(linebuf, ++line, fail_output);
                 } else {
                     fclose(logfileList[i]);
                     logfileList[i] = NULL;
@@ -257,7 +269,7 @@ void ReadPipe() {
     unsigned long count = 0;
 
     while (fgets(buftrans_in , MAX_LINE , stdin))
-        format(buftrans_in, ++count);
+        format(buftrans_in, ++count, fail_output);
 }
 
 void intHandler(int dummy) {

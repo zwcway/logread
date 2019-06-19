@@ -10,7 +10,13 @@
 
 Filter_list *fts = 0;
 Filter_list *fts_cur = 0;
+/**
+ * 列过滤列表
+ */
 Column_list *cts = 0;
+/**
+ * 列过滤当前指针
+ */
 Column_list *cts_cur = 0;
 
 
@@ -147,7 +153,12 @@ int collect_filter(const char *f) {
 
     return 1;
 }
-
+/**
+ * 添加一个列过滤选项
+ * @param c
+ * @param type
+ * @param cond
+ */
 void add_column(char *c, unsigned char type, unsigned char cond) {
     if (!cts_cur)
         cts_cur = cts = (Column_list*)calloc(1, sizeof(Column_list));
@@ -165,12 +176,18 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
     cts_cur->type = type;
     cts_cur->cond = cond;
 }
-
+/**
+ * 将运行参数中的列过滤选项添加至全局列过滤列表中
+ * @param c
+ * @param cond
+ * @return
+ */
 int collect_colmun(const char *c, unsigned char cond) {
     char *str = (char*)c;
     char *col = strtok(str, ",");
     size_t len = 0;
     unsigned char type = FCT_NORMAL;
+    unsigned count = 0;
     while(col) {
         if (col[0] == '*') {
             type |= FCT_RIGHT;
@@ -189,9 +206,10 @@ int collect_colmun(const char *c, unsigned char cond) {
             type |= FCT_LTRT;
         }
         add_column(col, type, cond);
+        count ++;
         col = strtok(NULL, ",");
     }
-    return 1;
+    return count;
 }
 
 const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {

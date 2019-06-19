@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <regex.h>
+#include <stdbool.h>
 #include "lstring.h"
 #include "utils.h"
 #include "cJSON.h"
@@ -120,9 +121,14 @@ typedef struct Log {
 
 #define FORMATER_PROC_ARGS          Log *log, const char *log_line, unsigned long lineno
 #define FORMATER_INIT_ARGS void
-
+/**
+ * 格式解析失败
+ */
 #define FORMATER_FAILED -1
-#define FORMATER_SUCCESS 0
+/**
+ * 格式解析失败，但是存在过滤，不输出原日志
+ */
+#define FORMATER_FILTED -2
 
 typedef int (*FmtProcFunc)(FORMATER_PROC_ARGS);
 typedef void (*FmtInitFunc)(FORMATER_INIT_ARGS);
@@ -258,7 +264,7 @@ void format_free(void);
 void field_free(Log_field *f);
 Log_field* field_duplicate(Log_field *f);
 
-void format(const char *, unsigned long);
+void format(const char *, unsigned long, bool failOutput);
 
 /**
  * 取子字符串，并支持删除两边空格

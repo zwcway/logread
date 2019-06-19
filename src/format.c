@@ -141,22 +141,29 @@ int parse_field(Log_field *field, char *tmp) {
 
     return valtype;
 }
-
-void format(const char *line, const unsigned long lineno) {
+/**
+ * 格式化日志
+ * @param line
+ * @param lineno
+ * @param failOutput
+ */
+void format(const char *line, const unsigned long lineno, const bool failOutput) {
     int colCnt = 0;
     Log log;
 
     L_INIT_LOG(&log);
 
+    // 根据配置的格式插件，处理日志格式
+    // 只要有一个处理成功了，就跳出
     for (int i = 0; i < formaterlen; ++i) {
         colCnt = formaters[i].procerfunc(&log, line, lineno);
         // 处理成功后跳出循环
         if (colCnt != FORMATER_FAILED) break;
     }
 
-    if (FORMATER_FAILED == colCnt)
-        printf("%s", line);
-    else
+    if (FORMATER_FAILED == colCnt) {
+        if (failOutput) printf("%s", line);
+    } else
         print_log(&log, output_type, output_option);
 
     log_free(&log);
@@ -171,13 +178,18 @@ unsigned char cov_level_str(char *str) {
     return LEVEL_UNKNOwN;
 }
 
+/**
+ * 格式化插件构造
+ */
 void format_init(void) {
     formaterlen = sizeof(formaters) / sizeof(Formater);
 
     for (int i = 0; i < formaterlen; ++i)
         formaters[i].initfunc();
 }
-
+/**
+ * 格式化插件析构
+ */
 void format_free(void) {
     for (int i = 0; i < formaterlen; ++i)
         formaters[i].destoryFunc();
