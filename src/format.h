@@ -262,7 +262,7 @@ void format_init(void);
 void format_free(void);
 
 void field_free(Log_field *f);
-Log_field* field_duplicate(Log_field *f);
+Log_field* field_duplicate(Log_field *f, const char *key);
 
 void format(const char *, unsigned long, bool failOutput);
 

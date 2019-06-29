@@ -219,7 +219,6 @@ const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
     cJSON *item = (cJSON*)json;
     const cJSON *child;
 
-    // TODO 使用循环代替递归
     for (; item; item = item->next) {
         switch (item->type) {
             case cJSON_Object:
@@ -264,7 +263,7 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     if ((cur->type&FCT_JSON) && field->type == TYPE_JSON) {
         const cJSON *json;
         if((json = filter_jsoncolumn(cur, field->valjson))) {
-            Log_field *newfield = field_duplicate(field);
+            Log_field *newfield = field_duplicate(field, cur->column);
             newfield->valjson = filter_json_duplicate((cJSON*)json);
             return newfield;
         }

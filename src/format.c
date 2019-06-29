@@ -56,17 +56,23 @@ void field_free(Log_field *f) {
     }
 }
 
-Log_field* field_duplicate(Log_field *f) {
+Log_field* field_duplicate(Log_field *f, const char *key) {
     Log_field *copy;
 
     L_INIT_FIELD(copy);
 
     memcpy(copy, f, sizeof(Log_field));
 
-    copy->key = strdup(f->key);
+    copy->key = strdup(key ? key : f->key);
 
-    L_INIT_VALUE(copy);
-    copy->valstr->valstring = strdup(f->valstr->valstring);
+    if (f->valstr) {
+        LF_STRING(copy, strdup(f->valstr->valstring));
+    }
+
+    if (f->hl) {
+        copy->hl = NULL;
+        L_INIT_HIGHLIGHT(copy->hl);
+    }
 
     copy->next = copy->prev = NULL;
     return copy;
