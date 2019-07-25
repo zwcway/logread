@@ -52,20 +52,24 @@ static int parse_app(Log *log, const char *line) {
                 break;
             case OP_SPER:
                 // 跳过连续空格
-                while (*(steper + 1) == OP_SPER) steper++;
+                while (is_spc(steper)) steper++;
 
                 if (STACK_IS_EMPTY(stack)) {
-                    if(!key) key = steper + 1;
+                    if(!key) key = steper;
+                    else
+                        while (is_spc(key)) key++;
                 }
                 break;
             case OP_OPEN:
-                if(*(steper - 1) == OP_SPER) {
+                if(is_spc(steper - 1)) {
                     while(!is_nr(steper + 1)) steper++;
                     goto PARSE_EXTRA;
                 }
 
                 if (key) {
-                    keyLen = steper - key;
+                    if (has_spc(key, keyLen = steper - key)) {
+                        break;
+                    }
                     field->key = sub_trim(key, keyLen);
                     key = 0;
                 }
@@ -79,6 +83,8 @@ static int parse_app(Log *log, const char *line) {
 
                 PUSH(stack, *steper);
                 break;
+            case '\r':
+            case '\n':
             case OP_CLOSE:
                 // 重复时取最后一个
 //                while (*(steper + 1) == OP_CLOSE) steper++;
@@ -99,14 +105,11 @@ static int parse_app(Log *log, const char *line) {
                             L_ADD_FIELD(field);
 
                     }
-                    if(!key) key = steper + 1;
+                    //if(!key) key = steper;
                     start = 0;
                 }
                 break;
             default:
-                if (STACK_IS_EMPTY(stack)) {
-
-                }
                 break;
         }
     } while(!is_eof(++steper));

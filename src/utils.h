@@ -6,6 +6,7 @@
 #define LOGR_UTILS_H
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/cdefs.h>
 
@@ -27,5 +28,7 @@ extern char * strrstri(const char *, const char *) __THROW __attribute_pure__ __
 extern int strileft(const char *, const char *) __THROW __attribute_pure__ __nonnull ((1, 2));
 extern int striright(const char *, const char *) __THROW __attribute_pure__ __nonnull ((1, 2));
 extern char *stristr(const char *, const char *) __THROW __attribute_pure__ __nonnull ((1, 2));
+
+extern bool has_spc(const char *, size_t len) __THROW __attribute_pure__ __nonnull ((1));
 
 #endif //LOGR_UTILS_H

@@ -49,6 +49,16 @@ void urldecode2(char *dst, const char *src) {
     *dst++ = '\0';
 }
 
+extern bool has_spc(const char *str, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (is_spc(str + i)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 char * strstri(const char *__haystack, const char *__needle) {
 }
 

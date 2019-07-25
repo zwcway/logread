@@ -18,7 +18,7 @@ regmatch_t __ral_pmatch[1];
 static int has_op(char *line) {
     char *tmp = line;
     while (*tmp != '\0' && *tmp != OP_CLOSE) {
-        if (*tmp == OP_SPER) return 1;
+        if (*tmp == OP_EQUAL) return 1;
         tmp ++;
     }
     return 0;
@@ -53,12 +53,14 @@ static int parse_ral(Log *log, const char *line) {
 
     do {
         switch (*steper) {
+            case OP_CLOSE:
+            case '\r':
+            case '\n':
             case OP_SPER:
-                // 跳过连续空格
-                while (*(steper + 1) == OP_SPER) steper++;
-
-
                 end = steper;
+                // 跳过连续空格
+                while (is_spc(steper)) steper++;
+
                 if (start) {
                     valLen = end - start;
                     // 值
@@ -72,7 +74,7 @@ static int parse_ral(Log *log, const char *line) {
                     count ++;
 
                     if (!is_end(steper + 1) && has_op(steper + 1)) {
-                        if(!key) key = steper + 1;
+                        if(!key) key = steper;
                         L_ADD_FIELD(field);
                     }
                 }
@@ -81,7 +83,9 @@ static int parse_ral(Log *log, const char *line) {
                 break;
             case OP_EQUAL:
                 if (key) {
-                    keyLen = steper - key;
+                    if (has_spc(key, keyLen = steper - key)) {
+                        break;
+                    }
                     field->key = sub_str(key, keyLen);
                     key = 0;
                 }
@@ -91,9 +95,6 @@ static int parse_ral(Log *log, const char *line) {
 
                 start = steper;
 
-                break;
-            case OP_CLOSE:
-                steper++;
                 break;
             default:
                 break;
