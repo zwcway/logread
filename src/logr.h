@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <limits.h>
 
-#define VERSION "0.5.4"
+#define VERSION "0.5.5"
 #define PROGRAM "logr"
 /**
  * 单次读取一行的最大字符数
