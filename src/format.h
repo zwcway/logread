@@ -264,7 +264,7 @@ void format_free(void);
 void field_free(Log_field *f);
 Log_field* field_duplicate(Log_field *f, const char *key);
 
-void format(const char *, unsigned long, bool failOutput);
+void format(char *, unsigned long, bool failOutput);
 
 /**
  * 取子字符串，并支持删除两边空格

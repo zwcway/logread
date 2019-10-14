@@ -12,6 +12,7 @@
 
 #include "format/app.h"
 #include "format/ral.h"
+#include "highlight.h"
 
 static Formater formaters[] = {
         ADD_FORMATER(ral),
@@ -153,11 +154,14 @@ int parse_field(Log_field *field, char *tmp) {
  * @param lineno
  * @param failOutput
  */
-void format(const char *line, const unsigned long lineno, const bool failOutput) {
+void format(char *line, const unsigned long lineno, const bool failOutput) {
     int colCnt = 0;
     Log log;
 
     L_INIT_LOG(&log);
+
+    char *str = line;
+    remove_color(str);
 
     // 根据配置的格式插件，处理日志格式
     // 只要有一个处理成功了，就跳出

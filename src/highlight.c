@@ -230,3 +230,39 @@ void parse_logr_colors (void) {
             break;
     }
 }
+
+
+void remove_color(char *line) {
+    char *str = line;
+    int jump;
+    while(!is_eof(str)) {
+        jump = 1;
+        if (*str == 27 && *(str+1) == '[') {
+            jump = 2;
+            if (*(str+jump) >= '0' && *(str+jump) <= '9') {
+                jump ++;
+            }
+            if (*(str+jump) >= '0' && *(str+jump) <= '9') {
+                jump ++;
+            }
+            if (*(str+jump) == ';') {
+                jump++;
+                if (*(str+jump) >= '0' && *(str+jump) <= '9') {
+                    jump ++;
+                }
+                if (*(str+jump) >= '0' && *(str+jump) <= '9') {
+                    jump ++;
+                }
+            }
+            if (*(str+jump) == 'm' || *(str+jump) == 'G' || *(str+jump) == 'K') {
+                jump++;
+            }
+        }
+        if (jump > 1) {
+            str += jump;
+            continue;
+        }
+        *(line++) = *(str++);
+    }
+    *line = '\0';
+}

@@ -66,4 +66,6 @@ extern void parse_logr_colors (void);
 
 extern void color_dict_free(void);
 
+extern void remove_color(char *line);
+
 #endif //LOGR_HIGHLIGHT_H
