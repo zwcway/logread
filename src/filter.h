@@ -12,33 +12,34 @@
 #include "lstring.h"
 
 /** 正则匹配 */
-#define F_OP_PG  1
+#define F_OP_PG     1
 /** 正则匹配 - 取反 */
-#define F_OP_NPG  51
+#define F_OP_NPG    51
 /** 模糊匹配 */
-#define F_OP_FZ  2
+#define F_OP_FZ     2
 /** 模糊匹配 - 取反 */
-#define F_OP_NFZ  52
+#define F_OP_NFZ    52
 
 /** 小于 */
-#define F_OP_LT  3
+#define F_OP_LT     3
 /** 大于 */
-#define F_OP_GT  4
+#define F_OP_GT     4
 /** 大于等于 */
-#define F_OP_GE  5
+#define F_OP_GE     5
 /** 小于等于 */
-#define F_OP_LE  6
+#define F_OP_LE     6
 /** 等于 */
-#define F_OP_EQ  7
+#define F_OP_EQ     7
 /** 不等于 */
-#define F_OP_NEQ  57
+#define F_OP_NEQ    57
 /** 是否存在KEY */
-#define F_OP_KEY  97
+#define F_OP_KEY    97
 
-#define F_OP_MASK  0xFFF
+#define F_OP_MASK   0xFFF
 
 /** 标记是否是JSON的KEY */
 #define F_OPT_JSONKEY   0x1000
+/** 标记是否是数字型 */
 #define F_OPT_NUMVAL    0x2000
 #define F_OP_VAL  99
 
@@ -56,18 +57,21 @@
 #define FC_OR 1
 #define FC_AND 2
 
+/** 获取过滤器的操作符 */
 #define F_GET_OP(__op)          ((__op)->op & F_OP_MASK)
+/** 判断过滤器的操作符 */
 #define F_IS_OP(__op, __t)      (F_GET_OP(__op) == __t)
-#define F_IS_TOPT(__op, __t)      ((__op)->type&__t)
+/** 判断过滤器的类型 */
+#define F_IS_TOPT(__op, __t)    ((__op)->type&__t)
 
 /**
  * JSON输出标记 递归输出子JSON
  */
-#define FC_OPT_RECURSE  0x2
+#define FC_OPT_RECURSE      0x2
 /**
  * 通用标记 上一次列过滤匹配成功
  */
-#define FC_OPT_LASTSUCC      0x1000
+#define FC_OPT_LASTSUCC     0x1000
 
 /**
  * 过滤失败，允许输出
@@ -112,6 +116,7 @@ typedef struct Column_list {
 #define IS_OP(chr)      ((chr)=='>'||(chr)=='<'||'='==(chr)||'!'==(chr)||'*'==(chr)||'~'==(chr))
 /** 操作符是否是数字类 */
 #define F_IS_NUMOP(ff)  (F_IS_OP(ff,F_OP_EQ)||F_IS_OP(ff,F_OP_LT)||F_IS_OP(ff,F_OP_LE)||F_IS_OP(ff,F_OP_GT)||F_IS_OP(ff,F_OP_GE)||F_IS_OP(ff,F_OP_NEQ))
+/** 操作符是否是数字类 */
 #define F_IS_NUM(ff)    (F_IS_TOPT(ff,F_OPT_NUMVAL)&&F_IS_NUMOP(ff))
 /** 操作符是否是字符串类 */
 #define F_IS_STROP(ff)  (F_IS_OP(ff,F_OP_FZ)||F_IS_OP(ff,F_OP_PG)||F_IS_OP(ff,F_OP_NFZ)||F_IS_OP(ff,F_OP_EQ)||F_IS_OP(ff,F_OP_NPG)||F_IS_OP(ff,F_OP_NEQ))
@@ -354,11 +359,11 @@ static int filter_jsonkey(const Filter *filter, const cJSON *json) {
     return F_FAIL;
 }
 
-static int filter_time(const Filter *filter, const Log_time *time) {
+static int filter_time(const Filter *filter, const Log_value *time) {
     if (!time) return F_FAIL;
 
-    if (F_IS_NUM(filter)) return filter_long(filter, (long long)time->ts);
-    return filter_string(filter, time->str, 0);
+    if (F_IS_NUM(filter)) return filter_long(filter, (long long)time->vallong);
+    return filter_string(filter, time->valstring, 0);
 }
 static int filter_host(const Filter *filter, Log_host *host) {
     if (!host) return F_FAIL;

@@ -2,6 +2,7 @@
 // Created by Administrator on 2019/3/19.
 //
 #include "type.h"
+#include "type/time.h"
 
 
 int isInteger(const char *str) {
@@ -30,17 +31,19 @@ int isIpV4(const char *ipAddress) {
     struct in_addr sa;
     return conv2IpV4(ipAddress, &sa);
 }
+
 /**
  * 获取字符串应该是什么类型
  *
+ * 可判断的类型有 NULL、JSON、LONG、DOUBLE、IP、TIME、STRING
  * TODO 待优化准确度
  *
  * @param str
  * @return
  */
-int guessType(const char *str) {
+int guessType(const char *str, Time *pTime) {
     int numcnt = 0, poicnt = 0, len = 0;
-    int isDouble = 1, isLong = 1;
+    int isDouble = 1, isLong = 1, isTime = 0;
     const char *firstchr;
     char lastchr;
 
@@ -77,6 +80,8 @@ int guessType(const char *str) {
     if (isDouble && numcnt < 20) return TYPE_DOUBLE;
 
     if (isIpV4(firstchr)) return TYPE_IP;
+
+    if (strtotime(firstchr, pTime)) return TYPE_TIME;
 
     return TYPE_STRING;
 }

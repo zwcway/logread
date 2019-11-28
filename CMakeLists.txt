@@ -52,8 +52,8 @@ INCLUDE_DIRECTORIES(
         parser/
 )
 
-FILE(GLOB_RECURSE DIR_SRCS lib/*.c src/*.c)
-FILE(GLOB_RECURSE DIR_HEADERS lib/*.h src/*.h)
+FILE(GLOB_RECURSE DIR_SRCS lib/*.c src/**.c)
+FILE(GLOB_RECURSE DIR_HEADERS lib/*.h src/**.h)
 
 ADD_EXECUTABLE(${PROJECT_NAME}
         ${DIR_SRCS}

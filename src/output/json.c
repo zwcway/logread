@@ -59,8 +59,8 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
         cJSON_AddItemToObject(__json, COL_FILE, _item);
         count++;
     }
-    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
-        _item = cJSON_CreateString(log->time->str);
+    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME)) {
+        _item = cJSON_CreateString(log->time->valstring);
         cJSON_AddItemToObject(__json, COL_TIME, _item);
         count++;
     }

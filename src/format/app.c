@@ -1,5 +1,6 @@
 //
 // Created by Administrator on 2019/4/1.
+// 业务日志格式解析器
 //
 
 #include <stdio.h>
@@ -135,7 +136,7 @@ FORMATER_DESTORY_FUNC(app) {
 FORMATER_INIT_FUNC(app) {
     reg_app = (regex_t *)malloc(sizeof(regex_t));
     if (regcomp(reg_app,
-                "(([0-9]+\\.){3}[0-9]+: )?(NOTICE|WARNING|TRACE|DEBUG): [0-9]{2}-[01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} \\[([0-9a-zA-Z_/]+\\.php:[0-9]+)\\]",
+                "(.+?: )?(NOTICE|WARNING|TRACE|DEBUG): [0-9]{2}-[01][0-9]-[0-3][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} \\[([0-9a-zA-Z_/]+\\.php:[0-9]+)\\]",
                 REG_EXTENDED)) {
         regfree(reg_app);
         free(reg_app);
@@ -187,12 +188,13 @@ FORMATER_PROC_FUNC(app) {
 
     // time
     L_INIT_TIME(log);
-    log->time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    struct tm tm;
-    if (0 != strptime(log->time->str, "%y-%m-%d %H:%M:%S", &tm))
-        log->time->ts = mktime(&tm);
+    log->time->valstring = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    Time time;
+    strtotime(log->time->valstring, &time);
+    if (strtotime(log->time->valstring, &time))
+        log->time->vallong = time.ts;
     else
-        log->time->ts = 0;
+        log->time->vallong = 0;
     colcnt++;
 
     log->logid = 0;

@@ -1,5 +1,6 @@
 //
 // Created by Administrator on 2019/4/1.
+// ral日志格式解析器
 //
 
 #include <stdio.h>
@@ -140,7 +141,6 @@ FORMATER_PROC_FUNC(ral) {
     int colcnt = 0;
     char *logline = (char *)log_line;
     char *stt1, *stt2, *tmp;
-    struct tm tm;
 
     log->pos = lineno;
 
@@ -169,11 +169,12 @@ FORMATER_PROC_FUNC(ral) {
     // time
     L_INIT_TIME(log);
     stt2 = strstr(stt1, ": ");
-    log->time->str = sub_trim(stt1 + 1, stt2 - stt1 - 1);
-    if (0 != strptime(log->time->str, "%m-%d %H:%M:%S", &tm))
-        log->time->ts = mktime(&tm);
+    log->time->valstring = sub_trim(stt1 + 1, stt2 - stt1 - 1);
+    Time time;
+    if (strtotime(log->time->valstring, &time))
+        log->time->vallong = time.ts;
     else
-        log->time->ts = 0;
+        log->time->vallong = 0;
     colcnt++;
 
     // file

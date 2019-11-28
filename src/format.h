@@ -80,11 +80,6 @@ typedef struct Log_field {
     Highlight *hl;
 } Log_field;
 
-typedef struct Log_time {
-    time_t ts;
-    char *str;
-    Highlight *hl;
-} Log_time;
 typedef struct Log_host {
     in_addr_t lip;
     char *ip;
@@ -103,7 +98,7 @@ typedef struct Log {
     Log_level *level;
     Log_host *host;
     /** 生成时间 */
-    Log_time *time;
+    Log_value *time;
     /** 调用文件 */
     char *file;
     Highlight *fhl;
@@ -167,6 +162,9 @@ FORMATER_DESTORY_FUNCNAME(name) \
 #define L_SET_INT(field)        L_SET_TYPE(field, TYPE_INT)
 #define L_SET_JSON(field)       L_SET_TYPE(field, TYPE_JSON)
 
+/**
+ * 初始化字段中的高亮器结构
+ */
 #define L_INIT_HIGHLIGHT(__hl) do { \
 if (NULL == __hl) { \
     __hl = (Highlight *)malloc(sizeof(Highlight)); \
@@ -178,30 +176,48 @@ if (NULL != __hl) { \
 } \
 } while(0)
 
+/**
+ * 初始化一个字段结构
+ */
 #define L_INIT_FIELD(field)    do { \
 (field) = (Log_field *)calloc(1, sizeof(Log_field)); \
 if (NULL!=field) L_INIT_HIGHLIGHT((field)->hl); \
 }while(0)
 
+/**
+ * 初始化字段中的通用值结构
+ */
 #define L_INIT_VALUE(field)  do { \
 if(NULL!=field) (field)->valstr = (Log_value *)calloc(1, sizeof(Log_value));\
 }while(0)
 
+/**
+ * 初始化字段中的域名结构
+ */
 #define L_INIT_HOST(log)  do { \
 (log)->host = (Log_host *)calloc(1, sizeof(Log_host)); \
 if (NULL != (log)->host) L_INIT_HIGHLIGHT((log)->host->hl); \
 }while(0)
 
+/**
+ * 初始化字段中的时间结构
+ */
 #define L_INIT_TIME(log)  do { \
-(log)->time = (Log_time *)calloc(1, sizeof(Log_time)); \
-if (NULL != (log)->time) L_INIT_HIGHLIGHT((log)->time->hl); \
+(log)->time = (Log_value *)calloc(1, sizeof(Log_value)); \
+/* if (NULL != (log)->time) L_INIT_HIGHLIGHT((log)->time->hl);*/ \
 }while(0)
 
+/**
+ * 初始化字段中的日志等级结构
+ */
 #define L_INIT_LEVEL(log)  do { \
 (log)->level = (Log_level *)calloc(1, sizeof(Log_level)); \
 if (NULL != (log)->level) L_INIT_HIGHLIGHT((log)->level->hl); \
 }while(0)
 
+/**
+ * 初始化整个单条日志的结构
+ */
 #define L_INIT_LOG(log)   do { \
 if (NULL == log) break; \
 (log)->level = NULL; \
@@ -221,8 +237,14 @@ L_INIT_HIGHLIGHT((log)->lhl); \
 L_INIT_HIGHLIGHT((log)->ehl); \
 } while(0)
 
+/**
+ * 判断高亮器是否已开启
+ */
 #define HAS_HIGHLIGHT(__hl)   ((NULL != __hl) && ((__hl)->pre != NULL || (__hl)->str != NULL || (__hl)->app != NULL))
 
+/**
+ * 字段赋值为整型
+ */
 #define LF_LONG(field, tmp) do { \
 L_INIT_VALUE(field); \
 L_SET_TYPE(field, TYPE_LONG); \
@@ -231,6 +253,9 @@ L_SET_TYPE(field, TYPE_LONG); \
 (field)->valstr->valstring = (tmp); \
 }while(0)
 
+/**
+ * 字段赋值为浮点型
+ */
 #define LF_DOUBLE(field, tmp) do { \
 L_INIT_VALUE(field); \
 L_SET_TYPE(field, TYPE_DOUBLE); \
@@ -239,6 +264,20 @@ L_SET_TYPE(field, TYPE_DOUBLE); \
 (field)->valstr->valdbl = atof(tmp); \
 }while(0)
 
+/**
+ * 字段赋值为时间型
+ */
+#define LF_TIME(field, tmp, ptm) do { \
+L_INIT_VALUE(field); \
+L_SET_TYPE(field, TYPE_TIME); \
+(field)->valstr->valstring = (tmp); \
+(field)->valstr->vallong = (ptm)->ts; \
+(field)->valstr->valdbl = (double)(ptm)->ts; \
+}while(0)
+
+/**
+ * 字段赋值为字符串
+ */
 #define LF_STRING(field, tmp) do { \
 L_INIT_VALUE(field); \
 (field)->valstr->valstring = (tmp); \
@@ -249,6 +288,9 @@ L_INIT_VALUE(field); \
 field->key = key; \
 }while(0)
 
+/**
+ * 向日志结构中增加一个字段结构
+ */
 #define L_ADD_FIELD(field)    do { \
 Log_field *add; \
 L_INIT_FIELD(add); \

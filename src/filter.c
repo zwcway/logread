@@ -3,6 +3,7 @@
 //
 
 #include <stdlib.h>
+#include "type/time.h"
 #include "filter.h"
 #include "cJSON.h"
 #include "format.h"
@@ -54,10 +55,18 @@ void filter_free() {
         cts = ccur;
     }
 }
-
+/**
+ * 预处理过滤器，解析成方便计算的格式
+ *
+ * @param filter
+ * @param str
+ * @return
+ */
 unsigned int parse_filter(Filter *filter, const char *str) {
     char *start = (char *)str;
     char nextchr;
+    int guess = 0;
+    Time time;
 
     if (is_end(str)) return 0;
 
@@ -97,9 +106,13 @@ unsigned int parse_filter(Filter *filter, const char *str) {
 
     filter->valstr = sub_trim(start, str - start);
 
-    switch (guessType(filter->valstr))  {
+    guess = guessType(filter->valstr, &time);
+
+    // 根据入参判断过滤器值的类型
+    switch (guess)  {
         case TYPE_LONG:
         case TYPE_DOUBLE:
+        case TYPE_TIME:
             filter->type |= F_OPT_NUMVAL;
             break;
         default:break;
@@ -114,10 +127,12 @@ unsigned int parse_filter(Filter *filter, const char *str) {
                 filter->reg = 0;
             }
         }
-
     }
     if (F_IS_NUMOP(filter)) {
-        if (filter->valstr) {
+        if (guess == TYPE_TIME) {
+            filter->vallong = time.ts;
+        }
+        else if (filter->valstr) {
             filter->vallong = atoll(filter->valstr);
             filter->valdbl = atof(filter->valstr);
         }
@@ -211,7 +226,12 @@ int collect_colmun(const char *c, unsigned char cond) {
     }
     return count;
 }
-
+/**
+ * json 取Key值
+ * @param cur
+ * @param json
+ * @return
+ */
 const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
     if (!json) return NULL;
     if (FC_IS_SUCCESS(cur)) return NULL;

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
+#include "type/time.h"
 #include "stack.h"
 #include "format.h"
 #include "output.h"
@@ -92,8 +93,8 @@ void log_free(Log *log) {
         free(log->level);
     }
     if (log->time) {
-        if (log->time->str) free(log->time->str);
-        field_hl(log->time->hl);
+        if (log->time->valstring) free(log->time->valstring);
+        // field_hl(log->time->hl);
         free(log->time);
     }
     if (log->logidstr) free(log->logidstr);
@@ -111,9 +112,17 @@ void log_free(Log *log) {
 
     if (log->value) field_free(log->value);
 }
-
+/**
+ * 解析日志中的一个字段
+ *
+ * @param field
+ * @param tmp
+ * @return
+ */
 int parse_field(Log_field *field, char *tmp) {
-    int valtype = guessType(tmp);
+    Time time;
+
+    int valtype = guessType(tmp, &time);
 
     switch (valtype) {
         case TYPE_LONG:
@@ -135,6 +144,9 @@ int parse_field(Log_field *field, char *tmp) {
             break;
         case TYPE_STRING:
             LF_STRING(field, tmp);
+            break;
+        case TYPE_TIME:
+            LF_TIME(field, tmp, &time);
             break;
         default:
             valtype = TYPE_NULL;

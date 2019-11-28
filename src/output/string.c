@@ -92,8 +92,8 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
         count++;
     }
 
-    if (log->time && log->time->str && F_SUCC == filter_column(col, COL_TIME)) {
-        print_log_highlight(__output, COL_TIME, log->time->str, log->time->hl, opt);
+    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME)) {
+        print_log_highlight(__output, COL_TIME, log->time->valstring, NULL, opt);
         count++;
     }
 
