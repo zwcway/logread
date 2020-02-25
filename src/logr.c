@@ -65,7 +65,9 @@ void PrintHelp(char *prog) {
     printf("  -j, --json           输出JSON格式\n");
     printf("  -J                   输出JSON格式，不处理类型为JSON的值\n");
     printf("\n");
-    printf("  -c, --column         过滤列。多个列使用英文逗号分隔。内置列：\n");
+    printf("  -c, --column         过滤列。多个列使用英文逗号分隔。支持通配符（* ?）。\n");
+    printf("                       对于JOSN的列，支持使用英文句号分割层级。\n");
+    printf("                       内置列：\n");
     printf("	                     time (日志生成时间): %s\n", COL_TIME);
     printf("	                     level(日志等级)    : %s\n", COL_LEVEL);
     printf("	                     file (来源文件)    : %s\n", COL_FILE);
@@ -74,26 +76,30 @@ void PrintHelp(char *prog) {
     printf("\n");
     printf("  -C                   所有列必须同时存在。用法同 %s 。\n", CUNDER("-c|--column"));
     printf("  -K                   只输出值不输出字段名称。\n");
-    printf("  -d                   每个字段之间的分隔符。\n");
     printf("  -t,--table           【TODO】 以表格形式输出。必须同时指定参数 %s\n", CUNDER("-c|-C"));
-    printf("                       同时自动指定参数 %s。\n", CUNDER("-K"));
+    printf("                       同时自动应用参数 %s。\n", CUNDER("-K"));
+    printf("  -d                   每个字段之间的分隔符。\n");
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
-    printf("                         key*val   指定字段中，任意位置模糊查找\n");
-    printf("                         key!*val  (取反)指定字段中，任意位置模糊查找\n");
+    printf("                         key=val   指定字段中，完全匹配val\n");
+    printf("                         key*val   指定字段中，任意位置模糊查找val\n");
+    printf("                         key!*val  指定字段中，不包含val\n");
+    printf("                         key!=val  指定字段中，完全不匹配val\n");
     printf("                         key~val   指定字段中，正则查找\n");
-    printf("                         key!~val  (取反)指定字段中，正则查找\n");
+    printf("                         key!~val  指定字段中，正则不匹配\n");
     printf("                         key>val   指定字段中，数值大于val\n");
     printf("                         key<val   指定字段中，数值小于val\n");
     printf("                         key>=val  指定字段中，数值大于等于val\n");
     printf("                         key<=val  指定字段中，数值小于等于val\n");
-    printf("                         key!=val  (取反)指定字段中，数值不等于val\n");
-    printf("                         key<>val  (取反)指定字段中，数值不等于val\n");
+    printf("                         key==val  指定字段中，数值等于val\n");
+    printf("                         key<>val  指定字段中，数值不等于val\n");
     printf("                         >val      任意字段数值大于val\n");
     printf("                         >=val     任意字段数值大于等于val\n");
     printf("                         <val      任意字段数值小于val\n");
     printf("                         <=val     任意字段数值小于等于val\n");
+    printf("                         ==val     任意字段数值小于等于val\n");
     printf("                         *val      任意字段模糊查找\n");
+    printf("                         =val      任意字段完全匹配\n");
     printf("                         ~val      正则查找\n");
     printf("\n");
     printf("环境变量：\n");
@@ -102,7 +108,7 @@ void PrintHelp(char *prog) {
     printf("\n");
     printf("示例：\n");
     printf("tail -f ral-worker.log | logr -c t,uri -f 'cost>1000' -f 'uri~^bizas'\n");
-    printf("tail -f ral-worker.log | logr -c t -c uri -f 'cost>1000' -f 'uri~^bizas'\n");
+    printf("logr -c t -c uri -f 'cost>1000' -f 'uri~^bizas' ral-worker.log\n");
     printf("    表示仅显示日志时间和接口地址两列，并且只显示耗时大于1000，并且接口路径以bizas开始的日志\n");
 }
 

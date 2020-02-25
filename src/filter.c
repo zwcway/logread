@@ -16,10 +16,13 @@ Filter_list *fts_cur = 0;
  */
 Column_list *cts = 0;
 /**
- * 列过滤当前指针
+ * 列过滤长度
  */
-Column_list *cts_cur = 0;
+static int cts_len = 0;
+static int cts_size = 0;
 
+#define CTS_MAX_LEN 30
+#define CTS_JSON_MAX_LEN 10
 
 void f_free(Filter *f) {
     if (f) {
@@ -35,7 +38,7 @@ void f_free(Filter *f) {
 
 void filter_free() {
     Filter_list *fcur;
-    Column_list *ccur;
+    Column_list *ccur, *ncur;
 
     while (fts) {
         fcur = fts->next;
@@ -46,14 +49,15 @@ void filter_free() {
         fts = fcur;
     }
 
-    while (cts) {
-        ccur = cts->next;
-
-//        if (cts->column) free(cts->column);
-        free(cts);
-
-        cts = ccur;
+    while (cts_len--) {
+        ccur = (cts + cts_len)->next;
+        while (ccur) {
+            ncur = ccur->next;
+            free(ccur);
+            ccur = ncur;
+        }
     }
+    free(cts);
 }
 /**
  * 预处理过滤器，解析成方便计算的格式
@@ -77,28 +81,46 @@ unsigned int parse_filter(Filter *filter, const char *str) {
     nextchr = *(str + 1);
 
     if (*str == '>') {
-        if (*(str + 1) == '=') {
+        if (nextchr == '=') {           // >=
             filter->op = F_OP_GE;
             str++;
-        } else filter->op = F_OP_GT;
+        } else                          // >
+            filter->op = F_OP_GT;
     } else if (*str == '<') {
-        if (nextchr == '=') {
+        if (nextchr == '=') {           // <=
             filter->op = F_OP_LE;
             str++;
-        } else if (nextchr == '>') {
+        } else if (nextchr == '>') {    // <>
             filter->op = F_OP_NEQ;
             str++;
-        } else filter->op = F_OP_LT;
-    } else if (*str == '=') filter->op = F_OP_EQ;
-    else if (*str == '~') filter->op = F_OP_PG;
-    else if (*str == '*') filter->op = F_OP_FZ;
+        } else                          // <
+            filter->op = F_OP_LT;
+    } else if (*str == '=')
+        if (nextchr == '=') {           // ==
+            filter->op = F_OP_EQ;
+            str++;
+        } else                          // =
+            filter->op = F_OP_EQ;
+    else if (*str == '~')               // ~
+        filter->op = F_OP_PG;
+    else if (*str == '*')               // *
+        filter->op = F_OP_FZ;
     else if (*str == '!') {
-        if (nextchr == '>') filter->op = F_OP_LE;
-        else if (nextchr == '<') filter->op = F_OP_GE;
-        else if (nextchr == '=') filter->op = F_OP_NEQ;
-        else if (nextchr == '~') filter->op = F_OP_NPG;
-        else if (nextchr == '*') filter->op = F_OP_NFZ;
-        str ++;
+        str++;
+        if (nextchr == '>')             // !>
+            filter->op = F_OP_LE;
+        else if (nextchr == '<')        // !<
+            filter->op = F_OP_GE;
+        else if (nextchr == '=')        // !=
+            filter->op = F_OP_NEQ;
+        else if (nextchr == '~')        // !~
+            filter->op = F_OP_NPG;
+        else if (nextchr == '*')        // !*
+            filter->op = F_OP_NFZ;
+        else {                          // !
+            filter->op = F_OP_NEQ;
+            str --;
+        }
     }
 
     start = (char *)++str;
@@ -175,145 +197,202 @@ int collect_filter(const char *f) {
  * @param cond
  */
 void add_column(char *c, unsigned char type, unsigned char cond) {
-    if (!cts_cur)
-        cts_cur = cts = (Column_list*)calloc(1, sizeof(Column_list));
-    else {
-        cts_cur->next = (Column_list*)calloc(1, sizeof(Column_list));
-        cts_cur = cts_cur->next;
+    if (cts_len++ >= CTS_MAX_LEN) {
+        return;
     }
-    if (cts_cur->type == FCT_LTRT) {
-        cts_cur->column = skip(c);
-    } else {
-        cts_cur->column = skip(c);
+    cts_size = 10 * ((cts_len / 10) + 1);
+    if (!cts || cts_len > cts_size) {
+        cts = (Column_list *) realloc(cts, cts_size * sizeof(Column_list));
     }
 
-    cts_cur->next = 0;
-    cts_cur->type = type;
-    cts_cur->cond = cond;
+    Column_list *cts_cur = (cts + (cts_len - 1));
+    unsigned char depth = 0;
+    unsigned char j_type = 0;
+
+    // json格式
+    if (strchr(c, '.'))
+        type |= FCT_JSON;
+    else
+        type |= FCT_TEXT;
+
+    char *jc = c;
+    do {
+        c = strchr(jc, '.');
+        if (c) {
+            *c = '\0';
+            c++;
+        }
+        if (depth > CTS_JSON_MAX_LEN) return;
+
+        j_type = type;
+        // 仅支持这几种通配符
+        if (strchr(jc, '*') || strchr(jc, '?')) {
+            j_type |= FCT_WILDCARD;
+            if (j_type & FCT_JSON && strstr(jc, "**"))
+                j_type |= FCT_WILDJSON;
+        }
+
+        if (depth ++ > 0) {
+            cts_cur->next = (Column_list *) calloc(1, sizeof(Column_list));
+            cts_cur = cts_cur->next;
+        }
+
+        cts_cur->next = 0;
+        cts_cur->type = j_type;
+        cts_cur->cond = FC_AND;
+        cts_cur->column = skip(jc);
+
+        jc = c;
+    } while(jc);
+
 }
 /**
  * 将运行参数中的列过滤选项添加至全局列过滤列表中
  * @param c
- * @param cond
+ * @param cond or and
  * @return
  */
 int collect_colmun(const char *c, unsigned char cond) {
     char *str = (char*)c;
+    unsigned char type;
+    unsigned count = (unsigned) (char_count(c, ',') + 1);
+
     char *col = strtok(str, ",");
-    size_t len = 0;
-    unsigned char type = FCT_NORMAL;
-    unsigned count = 0;
     while(col) {
-        if (col[0] == '*') {
-            type |= FCT_RIGHT;
-            col++;
-        }
-        len = strlen(col);
-        // 避免 * 或者 **
-        if (len > 1 && col[len - 1] == '*') {
-            type |= FCT_LEFT;
-            col[len - 1] = '\0';
-        }
-        if (strchr(col, '.')) {
-            type |= FCT_JSON;
-        }
-        if (!(type & (FCT_LEFT | FCT_RIGHT)) && strchr(col, '*')) {
-            type |= FCT_LTRT;
-        }
+        type = FCT_NORMAL;
         add_column(col, type, cond);
-        count ++;
         col = strtok(NULL, ",");
     }
     return count;
 }
+
 /**
- * json 取Key值
- * @param cur
+ * 复制出一个新的json节点
  * @param json
  * @return
  */
-const cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
-    if (!json) return NULL;
-    if (FC_IS_SUCCESS(cur)) return NULL;
-
-    cJSON *item = (cJSON*)json;
-    const cJSON *child;
-
-    for (; item; item = item->next) {
-        switch (item->type) {
-            case cJSON_Object:
-            case cJSON_Array:
-                if (item->path) {
-                    if (F_SUCC == filter_column(cur, item->path)) return item;
-                }
-                if (item->child) {
-                    if ((child = filter_jsoncolumn(cur, item->child))) return child;
-                }
-                break;
-            default:
-                if (item->path) {
-                    if (F_SUCC == filter_column(cur, item->path)) return item;
-                }
-                break;
-        }
-    }
-
-    return NULL;
-}
-
 cJSON* filter_json_duplicate(const cJSON *json) {
     cJSON *copy = cJSON_Duplicate((cJSON*)json, true);
-
-    free(copy->string);
-    copy->string = NULL;
 
     return copy;
 }
 
 /**
+ * 过滤json 取Key值
  *
+ * TODO 支持任意路径匹配 a.**.c
+ * @param cur
+ * @param json
+ * @return 返回找到的匹配的节点
+ */
+cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
+    if (!json) return NULL;
+
+    const cJSON *item = json;
+    /* 保存最终结果的 json 对象 */
+    cJSON *finded_json = NULL, *finded_item = NULL, *fined_child;
+    bool finded = false;
+
+    if (FC_IS_SUCCESS(cur)) {
+        // 过滤列表已经到达末尾，返回所有子节点
+        finded_json = finded_item = cJSON_Duplicate(item, true);
+        while (item = item->next) {
+            finded_item->next = cJSON_Duplicate(item, true);
+            finded_item = finded_item->next;
+        }
+        return finded_json;
+    }
+
+    do {
+        // 必须存在json路径属性
+        if (!item->path) continue;
+
+        if (item->string) {
+            if (F_FAIL == filter_column(cur, item->string, FCT_JSON)) continue;
+        } else {
+            // 过滤第一个节点
+            if (F_FAIL == filter_column(cur, item->path, FCT_JSON)) break;
+        }
+
+        if (!finded_json) {
+            // 准备好新json对象，复制第一个节点
+            finded_json = finded_item = cJSON_Duplicate(item, false);
+        }
+        else {
+            // 准备好下一个节点
+            finded_item->next = cJSON_Duplicate(item, false);
+            finded_item = finded_item->next;
+        }
+
+        switch (item->type) {
+            case cJSON_Object:
+            case cJSON_Array:
+                // 递归过滤所有子节点
+                fined_child = filter_jsoncolumn(cur->next, item->child);
+                if (fined_child) {
+                    // 插入到 准备好的节点中
+                    cJSON_AddItemToArray(finded_item, fined_child);
+                    finded = true;
+                }
+                continue;
+            default:
+                break;
+        }
+        if (cur->next) {
+            // 过滤条件中包含子层级，但是原json中已经没有子节点了
+            finded = false;
+        } else {
+            finded = true;
+        }
+    } while (item = item->next);
+
+    // 没有找到相匹配的item，释放内存
+    if (!finded && finded_json) {
+        cJSON_Delete(finded_json);
+        finded_json = NULL;
+    }
+
+    return finded_json;
+}
+/**
+ * 根据字段过滤
  * @param cur
  * @param field
- * @return
+ * @return 使用完一定要记得field_free
  */
 Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     if (!field) return NULL;
     if (FC_IS_SUCCESS(cur)) return field;
 
-    if ((cur->type&FCT_JSON) && field->type == TYPE_JSON) {
-        const cJSON *json;
+    if ((cur->type&FCT_JSON)) {
+        if (field->type != TYPE_JSON) return NULL;
+        cJSON *json;
         if((json = filter_jsoncolumn(cur, field->valjson))) {
-            Log_field *newfield = field_duplicate(field, cur->column);
-            newfield->valjson = filter_json_duplicate((cJSON*)json);
+            Log_field *newfield = field_duplicate(field, field->key);
+            newfield->valjson = json;
             return newfield;
         }
-    }
-    if (F_SUCC == filter_column(cur, field->key)) {
-        return field;
+    } else {
+        if (F_SUCC == filter_column(cur, field->key, FCT_TEXT)) return field;
     }
 
     return NULL;
 }
 /**
- * 过滤列名
+ * 过滤字段名称
  *
  * @param cur
  * @param key
  * @return F_SUCC：允许输出列
  */
-int filter_column(const Column_list *cur, const char *key) {
+int filter_column(const Column_list *cur, const char *key, unsigned type) {
     if (!key) return F_FAIL;
     if (FC_IS_SUCCESS(cur)) return F_SUCC;
+    if (!(cur->type & type)) return F_FAIL;
 
-    if((cur->type & FCT_RIGHT) && (cur->type & FCT_LEFT)) {
-        if (stristr(key, cur->column)) return F_SUCC;
-    } else if (cur->type & FCT_RIGHT) {
-        if (striright(key, cur->column)) return F_SUCC;
-    } else if (cur->type & FCT_LEFT) {
-        if (strileft(key, cur->column)) return F_SUCC;
-    } else if (cur->type & FCT_LTRT) {
-        if (strileft(key, cur->column)) return F_SUCC;
-    } else {
+    if(FCT_IS_TYPE(cur, FCT_WILDCARD)) {
+        if (is_match(key, cur->column)) return F_SUCC;
+    } else if(FCT_IS_TYPE(cur, FCT_NORMAL)) {
         if (0 == strcasecmp(key, cur->column)) return F_SUCC;
     }
 
@@ -321,9 +400,11 @@ int filter_column(const Column_list *cur, const char *key) {
 }
 
 int  filter_column_callback(void* arg, const Log *log, const int opt, print_colmn_func func) {
-    int count = 0, lastcount = -1;
+    int count = 0, lastcount = -1, len;
     if (cts) {
-        for (Column_list *cur = cts; cur; cur = cur->next) {
+        Column_list * cur;
+        for (len = 0; len < cts_len; len ++) {
+            cur = cts + len;
             if (cur->cond == FC_AND && lastcount == 0) return 0;
             lastcount = func(arg, log, cur, lastcount > 0 ? opt | FC_OPT_LASTSUCC : opt);
             count += lastcount;

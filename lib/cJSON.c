@@ -761,7 +761,7 @@ cJSON *cJSON_CreateDoubleArray(const double *numbers,int count)	{int i;cJSON *n=
 cJSON *cJSON_CreateStringArray(const char **strings,int count)	{int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;a && i<count;i++){n=cJSON_CreateString(strings[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}
 
 /* Duplication */
-cJSON *cJSON_Duplicate(cJSON *item,int recurse)
+cJSON *cJSON_Duplicate(const cJSON *item,int recurse)
 {
 	cJSON *newitem,*cptr,*nptr=0,*newchild;
 	/* Bail on bad ptr */
@@ -771,6 +771,7 @@ cJSON *cJSON_Duplicate(cJSON *item,int recurse)
 	if (!newitem) return 0;
 	/* Copy over all vars */
 	newitem->type=item->type&(~cJSON_IsReference),newitem->valueint=item->valueint,newitem->valuedouble=item->valuedouble;
+	if (item->path) {newitem->path=cJSON_strdup(item->path);}
 	if (item->valuestring)	{newitem->valuestring=cJSON_strdup(item->valuestring);	if (!newitem->valuestring)	{cJSON_Delete(newitem);return 0;}}
 	if (item->string)		{newitem->string=cJSON_strdup(item->string);			if (!newitem->string)		{cJSON_Delete(newitem);return 0;}}
 	/* If non-recursive, then we're done! */

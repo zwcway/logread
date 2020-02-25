@@ -173,3 +173,56 @@ extern size_t concat(char * __restrict __str, ...) {
 
     return len;
 }
+
+/**
+ * 通配符匹配
+ * @param s
+ * @param p
+ * @return
+ */
+bool is_match(const char *s, const char *p)
+{
+    bool star = false;
+    const char *str = s;
+    const char *ptr = p;
+
+    while (*str != '\0') {
+        switch (*ptr) {
+            case '?':
+                break;
+            case '*':
+                star = true;
+                s = str;
+                p = ptr;
+                while (*p == '*') {
+                    p++;
+                }
+                if (*p == '\0') { return true; }
+                str = s - 1;
+                ptr = p - 1;
+                break;
+            default:
+                if (*str != *ptr) {
+                    if (!star) {
+                        return false;
+                    }
+                    s++;
+                    str = s - 1;
+                    ptr = p - 1;
+                }
+        }
+        str++;
+        ptr++;
+    }
+    while (*ptr == '*') { ptr++; }
+    return (*ptr == '\0');
+}
+
+int char_count(const char *str, const char c) {
+    int num = 0;
+    while (*str != '\0')
+        if (*str++ == c)
+            num++;
+
+    return num;
+}

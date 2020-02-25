@@ -77,27 +77,27 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     int count = 0, isPrinted = 0;
     Log_field *field = log->value;
 
-    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
+    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST, FCT_TEXT)) {
         print_log_highlight(__output, COL_HOST, log->host->ip, log->host->hl, opt);
         count++;
     }
 
-    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL, FCT_TEXT)) {
         print_log_highlight(__output, COL_LEVEL, log->level->lstr, log->level->hl, opt);
         count++;
     }
 
-    if (F_SUCC == filter_column(col, COL_LOGID)) {
+    if (F_SUCC == filter_column(col, COL_LOGID, FCT_TEXT)) {
         print_log_highlight(__output, COL_LOGID, log->logidstr, log->lhl, opt);
         count++;
     }
 
-    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME)) {
+    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME, FCT_TEXT)) {
         print_log_highlight(__output, COL_TIME, log->time->valstring, NULL, opt);
         count++;
     }
 
-    if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
+    if (log->file && F_SUCC == filter_column(col, COL_FILE, FCT_TEXT)) {
         print_log_highlight(__output, COL_FILE, log->file, log->fhl, opt);
         count++;
     }
@@ -111,7 +111,7 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
         }
     };
 
-    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA)) {
+    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA, FCT_TEXT)) {
         P_STR(__output, COL_EXTRA, log->extra, opt);
         count++;
     }

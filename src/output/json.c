@@ -36,30 +36,30 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
     Log_field *field = log->value;
     cJSON * _item;
 
-    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST)) {
+    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST, FCT_TEXT)) {
         _item = cJSON_CreateString(log->host->ip);
         cJSON_AddItemToObject(__json, COL_HOST, _item);
         count++;
     }
 
-    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL)) {
+    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL, FCT_TEXT)) {
         _item = cJSON_CreateString(log->level->lstr);
         cJSON_AddItemToObject(__json, COL_LEVEL, _item);
         count++;
     }
 
-    if (F_SUCC == filter_column(col, COL_LOGID)) {
+    if (F_SUCC == filter_column(col, COL_LOGID, FCT_TEXT)) {
         _item = cJSON_CreateNumber((double)log->logid);
         cJSON_AddItemToObject(__json, COL_LOGID, _item);
         count++;
     }
 
-    if (log->file && F_SUCC == filter_column(col, COL_FILE)) {
+    if (log->file && F_SUCC == filter_column(col, COL_FILE, FCT_TEXT)) {
         _item = cJSON_CreateString(log->file);
         cJSON_AddItemToObject(__json, COL_FILE, _item);
         count++;
     }
-    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME)) {
+    if (log->time && log->time->valstring && F_SUCC == filter_column(col, COL_TIME, FCT_TEXT)) {
         _item = cJSON_CreateString(log->time->valstring);
         cJSON_AddItemToObject(__json, COL_TIME, _item);
         count++;
@@ -74,7 +74,7 @@ int print_log_to_json_column(void *arg, const Log *log, const Column_list *col, 
         }
     };
 
-    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA)) {
+    if (log->extra && F_SUCC == filter_column(col, COL_EXTRA, FCT_TEXT)) {
         _item = cJSON_CreateString(log->extra);
         cJSON_AddItemToObject(__json, COL_EXTRA, _item);
         count++;

@@ -44,15 +44,17 @@
 #define F_OP_VAL  99
 
 /** 完全匹配 */
-#define FCT_NORMAL   0x00
-/** 右边模糊，左边匹配 */
-#define FCT_LEFT     0x01
-/** 左边模糊，右边匹配 */
-#define FCT_RIGHT    0x02
-/** 中间模糊，两边匹配 */
-#define FCT_LTRT     0x04
+#define FCT_NORMAL   0
+/** 通配符匹配 */
+#define FCT_WILDCARD 1
+/** 标记为普通字段出匹配 */
+#define FCT_TEXT     0x10
 /** 标记为JSON路径匹配 */
-#define FCT_JSON     0x10
+#define FCT_JSON     0x20
+/** 标记为JSON任意路径匹配 */
+#define FCT_WILDJSON 0x40
+
+#define FCT_IS_TYPE(__ft, __t)        (((__ft)->type&0x0F) == __t)
 
 #define FC_OR 1
 #define FC_AND 2
@@ -162,7 +164,7 @@ extern int collect_filter(const char*);
 extern int collect_colmun(const char*, unsigned char);
 
 extern Log_field*  filter_fieldcolumn(const Column_list *cur, Log_field *field);
-extern int filter_column(const Column_list *, const char *);
+extern int filter_column(const Column_list *, const char *, unsigned);
 extern int filter_column_callback(void*, const Log *, int , print_colmn_func);
 
 static void F_HL_P(Highlight *__hl, const char *__str, int __of, int __ln) {
