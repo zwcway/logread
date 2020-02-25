@@ -1,0 +1,12 @@
+before_script:
+  - uname -a && cat /etc/issue
+  - cmake --version
+  - make --version
+
+cmake:
+  script:
+    - cmake CMakeLists.txt
+
+make:
+  script:
+    - make -j 4 
