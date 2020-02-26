@@ -36,6 +36,7 @@ extern int output_option;
 
 extern char *logr_op;
 extern char *logr_spc;
+extern bool logr_fullcol;
 
 /* 没有相应的短命名参数  */
 enum
@@ -44,6 +45,7 @@ enum
     OPTION_HELP,
     OPTION_VERSION,
     OPTION_COLUMN,
+    OPTION_FULL_COLUMN,
     OPTION_FILTER,
     OPTION_JSON,
     OPTION_TABLE,

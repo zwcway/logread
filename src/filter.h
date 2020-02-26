@@ -48,13 +48,16 @@
 /** 通配符匹配 */
 #define FCT_WILDCARD 1
 /** 标记为普通字段出匹配 */
-#define FCT_TEXT     0x10
+#define FCF_TEXT     0x10
 /** 标记为JSON路径匹配 */
-#define FCT_JSON     0x20
+#define FCF_JSON     0x20
 /** 标记为JSON任意路径匹配 */
-#define FCT_WILDJSON 0x40
+#define FCF_WILDJSON 0x40
+/** 标记为JSON路径可唯一确定 */
+#define FCF_DEFINITE 0x80
 
 #define FCT_IS_TYPE(__ft, __t)        (((__ft)->type&0x0F) == __t)
+#define FCT_HAS_FLAG(__ft, __t)        (((__ft)->type&__t) == __t)
 
 #define FC_OR 1
 #define FC_AND 2
@@ -109,7 +112,7 @@ typedef struct Filter_list {
 typedef struct Column_list {
     struct Column_list *next;
     const char *column;
-    unsigned char type;
+    unsigned type;
     /** 与或 */
     unsigned char cond;
 } Column_list;
@@ -127,7 +130,8 @@ typedef struct Column_list {
 /** 操作符是否是正则类 */
 #define F_IS_PEGOP(ff)  (F_IS_OP(ff,F_OP_PG)||F_IS_OP(ff,F_OP_NPG))
 
-#define FC_IS_SUCCESS(cur) (!(cur) || NULL == (cur)->column || *(cur)->column == 0)
+#define FC_IS_SUCCESS(cur) (!(cur) || !(cur)->column || !(*(cur)->column))
+#define FC_IS_END(cur)     ((!(cur) || !(cur)->next))
 
 /**
  * 过滤器结构初始化 <br/>

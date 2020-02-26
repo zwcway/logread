@@ -31,6 +31,10 @@ char *logr_op = "=";
  * 输出的分隔符
  */
 char *logr_spc = " ";
+/**
+ * 是否显示完成层级
+ */
+bool logr_fullcol = false;
 
 static unsigned int filted_count = 0;
 static unsigned int column_count = 0;
@@ -73,6 +77,8 @@ void PrintHelp(char *prog) {
     printf("	                     file (来源文件)    : %s\n", COL_FILE);
     printf("	                     logid(日志ID)      : %s\n", COL_LOGID);
     printf("	                     extra(其他)        : %s\n", COL_EXTRA);
+    printf("\n");
+    printf("  --full-col           过滤JSON列时，展示完整层级。");
     printf("\n");
     printf("  -C                   所有列必须同时存在。用法同 %s 。\n", CUNDER("-c|--column"));
     printf("  -K                   只输出值不输出字段名称。\n");
@@ -126,14 +132,15 @@ int ParseArg(int argc, char *argv[]) {
 
     struct option longopts[] =
             {
-                    {"debug"  ,no_argument,         0,              OPTION_DEBUG},
-                    {"help",   no_argument,         &helpflg,       OPTION_HELP},
-                    {"version",no_argument,         &verflg,        OPTION_VERSION},
-                    {"column", required_argument,   0,              OPTION_COLUMN},
-                    {"filter", required_argument,   0,              OPTION_FILTER},
-                    {"json",   no_argument,         0,              OPTION_JSON},
-                    {"table"  ,no_argument,         0,              OPTION_TABLE},
-                    {0,        0,                   0,              0}
+                    {"debug",    no_argument,       0,        OPTION_DEBUG},
+                    {"help",     no_argument,       &helpflg, OPTION_HELP},
+                    {"version",  no_argument,       &verflg,  OPTION_VERSION},
+                    {"column",   required_argument, 0,        OPTION_COLUMN},
+                    {"full-col", no_argument,       0,        OPTION_FULL_COLUMN},
+                    {"filter",   required_argument, 0,        OPTION_FILTER},
+                    {"json",     no_argument,       0,        OPTION_JSON},
+                    {"table",    no_argument,       0,        OPTION_TABLE},
+                    {0, 0,                          0,        0}
             };
 
     while ((c = getopt_long(argc, argv, "hvjJC:f:c:Kd:", longopts, NULL)) != EOF) {
@@ -148,6 +155,9 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case 'C':
                 column_count += collect_colmun(optarg, FC_AND);
+                break;
+            case OPTION_FULL_COLUMN:
+                logr_fullcol = true;
                 break;
             case OPTION_FILTER:
             case 'f':

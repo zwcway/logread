@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include "cJSON.h"
+#include "stringlib.h"
 
 static const char *ep;
 
@@ -463,19 +464,25 @@ static const char *parse_array(cJSON *item,const char *value)
 	item->child=child=cJSON_New_Item();
 	if (!item->child) return 0;		 /* memory fail */
 	child->parent=item;
+	if(item->path) child->path = pathcatint(item->path, index);
 	value=skip(parse_value(child,skip(value)));	/* skip any spacing, get the value. */
 	if (!value) return 0;
-	if(item->path) child->path = pathcatint(item->path, index++);
+	child->string=(char *)cJSON_calloc(12, sizeof(char));
+	if (child->string) itoa(index, child->string, 10);
+	index++;
 
 	while (*value==',')
 	{
 		cJSON *new_item;
 		if (!(new_item=cJSON_New_Item())) return 0; 	/* memory fail */
 		child->next=new_item;new_item->prev=child;child=new_item;
+		if(item->path) child->path = pathcatint(item->path, index);
 		value=skip(parse_value(child,skip(value+1)));
 		if (!value) return 0;	/* memory fail */
 		child->parent=item;
-		if(item->path) child->path = pathcatint(item->path, index++);
+		child->string=(char *)cJSON_calloc(12, sizeof(char));
+		if (child->string) itoa(index, child->string, 10);
+		index++;
 	}
 
 	if (*value==']') return value+1;	/* end of array */

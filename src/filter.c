@@ -196,7 +196,7 @@ int collect_filter(const char *f) {
  * @param type
  * @param cond
  */
-void add_column(char *c, unsigned char type, unsigned char cond) {
+void add_column(char *c, unsigned type, unsigned char cond) {
     if (cts_len++ >= CTS_MAX_LEN) {
         return;
     }
@@ -207,13 +207,14 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
 
     Column_list *cts_cur = (cts + (cts_len - 1));
     unsigned char depth = 0;
-    unsigned char j_type = 0;
+    unsigned j_type = 0;
+    bool definite = true;
 
     // json格式
     if (strchr(c, '.'))
-        type |= FCT_JSON;
+        type |= FCF_JSON;
     else
-        type |= FCT_TEXT;
+        type |= FCF_TEXT;
 
     char *jc = c;
     do {
@@ -228,8 +229,12 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
         // 仅支持这几种通配符
         if (strchr(jc, '*') || strchr(jc, '?')) {
             j_type |= FCT_WILDCARD;
-            if (j_type & FCT_JSON && strstr(jc, "**"))
-                j_type |= FCT_WILDJSON;
+
+            if (depth) {
+                definite = false;
+            }
+            if (j_type & FCF_JSON && strstr(jc, "**"))
+                j_type |= FCF_WILDJSON;
         }
 
         if (depth ++ > 0) {
@@ -245,6 +250,16 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
         jc = c;
     } while(jc);
 
+    if (!definite)
+        return;
+
+    // 设置确定性标记
+    cts_cur = (cts + (cts_len - 1));
+    while (cts_cur) {
+        cts_cur->type |= FCF_DEFINITE;
+        cts_cur = cts_cur->next;
+    }
+
 }
 /**
  * 将运行参数中的列过滤选项添加至全局列过滤列表中
@@ -254,7 +269,7 @@ void add_column(char *c, unsigned char type, unsigned char cond) {
  */
 int collect_colmun(const char *c, unsigned char cond) {
     char *str = (char*)c;
-    unsigned char type;
+    unsigned type;
     unsigned count = (unsigned) (char_count(c, ',') + 1);
 
     char *col = strtok(str, ",");
@@ -278,9 +293,10 @@ cJSON* filter_json_duplicate(const cJSON *json) {
 }
 
 /**
- * 过滤json 取Key值
+ * 过滤json 取完整Key值
  *
  * TODO 支持任意路径匹配 a.**.c
+ * TODO 最小化展示json  isdefinite
  * @param cur
  * @param json
  * @return 返回找到的匹配的节点
@@ -290,10 +306,10 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
 
     const cJSON *item = json;
     /* 保存最终结果的 json 对象 */
-    cJSON *finded_json = NULL, *finded_item = NULL, *fined_child;
+    cJSON *finded_json = NULL, *finded_item = NULL, *finded_child = NULL;
     bool finded = false;
 
-    if (FC_IS_SUCCESS(cur)) {
+    if (FC_IS_SUCCESS(cur) && FC_IS_END(cur)) {
         // 过滤列表已经到达末尾，返回所有子节点
         finded_json = finded_item = cJSON_Duplicate(item, true);
         while (item = item->next) {
@@ -303,24 +319,27 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
         return finded_json;
     }
 
+    bool isWild = FCT_IS_TYPE(cur, FCT_WILDCARD);
+    bool isdefinite = !logr_fullcol && FCT_HAS_FLAG(cur, FCF_DEFINITE);
+
     do {
         // 必须存在json路径属性
         if (!item->path) continue;
 
         if (item->string) {
-            if (F_FAIL == filter_column(cur, item->string, FCT_JSON)) continue;
+            if (F_FAIL == filter_column(cur, item->string, FCF_JSON)) continue;
         } else {
             // 过滤第一个节点
-            if (F_FAIL == filter_column(cur, item->path, FCT_JSON)) break;
+            if (F_FAIL == filter_column(cur, item->path, FCF_JSON)) break;
         }
 
+        finded_child = cJSON_Duplicate(item, false);
         if (!finded_json) {
             // 准备好新json对象，复制第一个节点
-            finded_json = finded_item = cJSON_Duplicate(item, false);
-        }
-        else {
+            finded_json = finded_item = finded_child;
+        } else {
             // 准备好下一个节点
-            finded_item->next = cJSON_Duplicate(item, false);
+            finded_item->next = finded_child;
             finded_item = finded_item->next;
         }
 
@@ -328,10 +347,10 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
             case cJSON_Object:
             case cJSON_Array:
                 // 递归过滤所有子节点
-                fined_child = filter_jsoncolumn(cur->next, item->child);
-                if (fined_child) {
+                finded_child = filter_jsoncolumn(cur->next, item->child);
+                if (finded_child) {
                     // 插入到 准备好的节点中
-                    cJSON_AddItemToArray(finded_item, fined_child);
+                    cJSON_AddItemToArray(finded_item, finded_child);
                     finded = true;
                 }
                 continue;
@@ -341,7 +360,7 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
         if (cur->next) {
             // 过滤条件中包含子层级，但是原json中已经没有子节点了
             finded = false;
-        } else {
+        } else if(logr_fullcol) {
             finded = true;
         }
     } while (item = item->next);
@@ -354,6 +373,7 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
 
     return finded_json;
 }
+
 /**
  * 根据字段过滤
  * @param cur
@@ -364,7 +384,7 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     if (!field) return NULL;
     if (FC_IS_SUCCESS(cur)) return field;
 
-    if ((cur->type&FCT_JSON)) {
+    if ((cur->type&FCF_JSON)) {
         if (field->type != TYPE_JSON) return NULL;
         cJSON *json;
         if((json = filter_jsoncolumn(cur, field->valjson))) {
@@ -373,7 +393,7 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
             return newfield;
         }
     } else {
-        if (F_SUCC == filter_column(cur, field->key, FCT_TEXT)) return field;
+        if (F_SUCC == filter_column(cur, field->key, FCF_TEXT)) return field;
     }
 
     return NULL;
