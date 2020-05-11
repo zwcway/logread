@@ -309,13 +309,13 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
     cJSON *finded_json = NULL, *finded_item = NULL, *finded_child = NULL;
     bool finded = false;
 
-    if (FC_IS_SUCCESS(cur) && FC_IS_END(cur)) {
+    if (FC_IS_SUCCESS(cur) || FC_IS_END(cur)) {
         // 过滤列表已经到达末尾，返回所有子节点
         finded_json = finded_item = cJSON_Duplicate(item, true);
-        while (item = item->next) {
-            finded_item->next = cJSON_Duplicate(item, true);
-            finded_item = finded_item->next;
-        }
+//        while (item = item->next) {
+//            finded_item->next = cJSON_Duplicate(item, true);
+//            finded_item = finded_item->next;
+//        }
         return finded_json;
     }
 

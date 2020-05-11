@@ -303,7 +303,6 @@ static int filter_json(const Filter *filter, const cJSON *json) {
     if (!filter->valstr) return F_FAIL;
     cJSON *item = (cJSON*)json;
 
-    // TODO 使用循环代替递归
     for(; item; item = item->next) {
         switch (item->type) {
             case cJSON_Object:
@@ -343,7 +342,6 @@ static int filter_jsonkey(const Filter *filter, const cJSON *json) {
     if (!filter->key) return F_FAIL;
     cJSON *item = (cJSON*)json;
 
-    // TODO 使用循环代替递归
     for (; item; item = item->next) {
         switch (item->type) {
             case cJSON_Object:

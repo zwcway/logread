@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <special-char.h>
 
 #include "logr.h"
 #include "filter.h"
@@ -52,6 +53,12 @@ void onExit(int no) {
     filter_free();
     color_dict_free();
     exit(no);
+}
+
+void parse_string(const char*optarg, char **log_spc)
+{
+    convert_string((char*)optarg);
+    *log_spc = (char*)optarg;
 }
 
 void PrintVersion(char *prog) {
@@ -168,7 +175,7 @@ int ParseArg(int argc, char *argv[]) {
                 verflg = 1;
                 break;
             case 'd':
-                logr_spc = optarg;
+                parse_string(optarg, &logr_spc);
                 break;
             case OPTION_JSON:
             case 'j':

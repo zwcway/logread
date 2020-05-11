@@ -51,6 +51,7 @@ static int parse_app(Log *log, const char *line) {
             case OP_DQOUTE:
             case OP_QOUTE:
                 break;
+
             case OP_SPER:
                 // 跳过连续空格
                 while (is_spc(steper)) steper++;
@@ -67,12 +68,11 @@ static int parse_app(Log *log, const char *line) {
                     goto PARSE_EXTRA;
                 }
 
-                if (key) {
+                if (key && !field->key) {
                     if (has_spc(key, keyLen = steper - key)) {
                         break;
                     }
                     field->key = sub_trim(key, keyLen);
-                    key = 0;
                 }
 
                 // 重复时取最先的一个
@@ -90,11 +90,19 @@ static int parse_app(Log *log, const char *line) {
                 // 重复时取最后一个
 //                while (*(steper + 1) == OP_CLOSE) steper++;
 
+                if(STACK_IS_EMPTY(stack)) {
+                    break;
+                }
                 POP(stack, &stch);
 
                 if (STACK_IS_EMPTY(stack)) {
                     // 栈结束，表示一个完整的键值遍历完成
                     end = steper;
+
+                    // 不是标准格式，跳出
+                    if (!is_spc(steper + 1) && !is_eof(steper + 1)) {
+                        break;
+                    }
                     if (start) {
                         valLen = end - start;
                         // 值
@@ -106,8 +114,8 @@ static int parse_app(Log *log, const char *line) {
                             L_ADD_FIELD(field);
 
                     }
-                    //if(!key) key = steper;
                     start = 0;
+                    key = 0;
                 }
                 break;
             default:
