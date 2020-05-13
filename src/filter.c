@@ -309,13 +309,9 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
     cJSON *finded_json = NULL, *finded_item = NULL, *finded_child = NULL;
     bool finded = false;
 
-    if (FC_IS_SUCCESS(cur) || FC_IS_END(cur)) {
+    if (FC_IS_SUCCESS(cur) && FC_IS_END(cur)) {
         // 过滤列表已经到达末尾，返回所有子节点
         finded_json = finded_item = cJSON_Duplicate(item, true);
-//        while (item = item->next) {
-//            finded_item->next = cJSON_Duplicate(item, true);
-//            finded_item = finded_item->next;
-//        }
         return finded_json;
     }
 
@@ -349,8 +345,13 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
                 // 递归过滤所有子节点
                 finded_child = filter_jsoncolumn(cur->next, item->child);
                 if (finded_child) {
-                    // 插入到 准备好的节点中
-                    cJSON_AddItemToArray(finded_item, finded_child);
+                    if (logr_fullcol) {
+                        // 插入到 准备好的节点中
+                        cJSON_AddItemToArray(finded_item, finded_child);
+                    } else {
+                        cJSON_Delete(finded_json);
+                        finded_json = finded_child;
+                    }
                     finded = true;
                 }
                 continue;
@@ -360,7 +361,7 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
         if (cur->next) {
             // 过滤条件中包含子层级，但是原json中已经没有子节点了
             finded = false;
-        } else if(logr_fullcol) {
+        } else {
             finded = true;
         }
     } while (item = item->next);

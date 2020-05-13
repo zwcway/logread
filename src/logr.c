@@ -133,7 +133,7 @@ void PrintHelp(char *prog) {
  */
 int ParseArg(int argc, char *argv[]) {
     int c;
-    int helpflg = 0, verflg = 0, errflg = 0;
+    int helpflg = 0, verflg = 0, errflg = 0, spcflg = 0;
     output_type = OUTPUT_STRING;
 
     struct option longopts[] =
@@ -174,6 +174,7 @@ int ParseArg(int argc, char *argv[]) {
                 verflg = 1;
                 break;
             case 'd':
+                spcflg = 1;
                 parse_string(optarg, &logr_spc);
                 break;
             case OPTION_JSON:
@@ -188,7 +189,7 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case OPTION_TABLE:
             case 't':
-                logr_spc = "\r\n";
+                if (!spcflg) logr_spc = "\r\n";
                 output_option |= OUTPUT_OPT_TABLE;
                 break;
             case OPTION_DEBUG:
