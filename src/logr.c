@@ -188,7 +188,7 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case OPTION_TABLE:
             case 't':
-                optarg = "\r\n";
+                logr_spc = "\r\n";
                 output_option |= OUTPUT_OPT_TABLE;
                 break;
             case OPTION_DEBUG:
