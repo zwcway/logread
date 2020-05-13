@@ -38,6 +38,20 @@ void print_json_to_str(OutputBuffer *__output, cJSON *json) {
     }
 }
 
+bool rtrim(OutputBuffer *str, const char *chrs)
+{
+    if (!str) return false;
+    size_t chlen = strlen(chrs);
+
+    if (strcmp(str->outputstr + str->offset - chlen, chrs) == 0) {
+        str->offset -= chlen;
+        *(str->outputstr + str->offset) = '\0';
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * 打印一个字段
  *
@@ -132,13 +146,15 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     if (log->extra && F_SUCC == filter_column(col, COL_EXTRA, FCF_TEXT)) {
         if (key_w) {
             new_key = str_pad_left(COL_EXTRA, ' ', key_w);
-            P_STR(__output, new_key, log->extra, opt&~OUTPUT_OPT_SEPARATOR);
+            P_STR(__output, new_key, log->extra, opt);
             free(new_key);
         } else {
-            P_STR(__output, COL_EXTRA, log->extra, opt&~OUTPUT_OPT_SEPARATOR);
+            P_STR(__output, COL_EXTRA, log->extra, opt);
         }
         count++;
     }
+
+    rtrim(__output, logr_spc);
 
     return count;
 }
