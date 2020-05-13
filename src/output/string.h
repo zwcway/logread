@@ -9,7 +9,7 @@
 #include "output.h"
 #include "highlight.h"
 
-#define P_STR(__s, __key, __str, __opt)         sprtf_key_val(__s, __key, __str, __opt|OUTPUT_OPT_SEPARATOR);
+#define P_STR(__s, __key, __str, __opt)         sprtf_key_val(__s, __key, __str, __opt);
 /* 字符串输出至缓存 */
 #define P_STR_BUF(__s, str)         SPRTF_STR_BUF(__s, "%s", str);
 /* 包含引号的输出至缓存 */

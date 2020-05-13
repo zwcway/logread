@@ -382,6 +382,7 @@ cJSON* filter_jsoncolumn(const Column_list *cur, const cJSON *json) {
  */
 Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     if (!field) return NULL;
+    if (!field->key) return NULL;
     if (FC_IS_SUCCESS(cur)) return field;
 
     if ((cur->type&FCF_JSON)) {
@@ -395,6 +396,9 @@ Log_field* filter_fieldcolumn(const Column_list *cur, Log_field *field) {
     } else {
         if (F_SUCC == filter_column(cur, field->key, FCF_TEXT)) return field;
     }
+
+    if (field->key) free(field->key);
+    field->key = NULL;
 
     return NULL;
 }

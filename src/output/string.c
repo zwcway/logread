@@ -2,6 +2,7 @@
 // Created by Administrator on 2019/4/3.
 //
 
+#include <math.h>
 #include "output/string.h"
 #include "logr.h"
 #include "filter.h"
@@ -30,7 +31,7 @@ void print_log_highlight(OutputBuffer *__output, const char *key, const char *va
  */
 void print_json_to_str(OutputBuffer *__output, cJSON *json) {
     if (!json) return;
-    char *buffer = cJSON_PrintBuffered(json, (int)PRINTF_LENGTH(__output), 0);
+    char *buffer = cJSON_PrintBuffered(json, (int) PRINTF_LENGTH(__output), 0);
     if (buffer) {
         P_STR_BUF(__output, buffer);
         free(buffer);
@@ -69,20 +70,20 @@ void print_str_field(OutputBuffer *__output, const Log_field *field, const int o
             return;
     }
 
-    P_STR(__output, field->key, str_buffer.outputstr, opt);
+    P_STR(__output, field->key ? field->key : "", str_buffer.outputstr, opt);
 }
 
 int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, const int opt) {
-    OutputBuffer *__output = (OutputBuffer *)arg;
+    OutputBuffer *__output = (OutputBuffer *) arg;
     int count = 0, isPrinted = 0;
-    Log_field *field = log->value;
+    Log_field *field, *firstField = log->value;
 
-    if(log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST, FCF_TEXT)) {
+    if (log->host && log->host->ip && F_SUCC == filter_column(col, COL_HOST, FCF_TEXT)) {
         print_log_highlight(__output, COL_HOST, log->host->ip, log->host->hl, opt);
         count++;
     }
 
-    if(log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL, FCF_TEXT)) {
+    if (log->level && log->level->lstr && F_SUCC == filter_column(col, COL_LEVEL, FCF_TEXT)) {
         print_log_highlight(__output, COL_LEVEL, log->level->lstr, log->level->hl, opt);
         count++;
     }
@@ -103,8 +104,25 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     }
 
     Log_field *field1;
-    for(; field; field = field->next) {
+    unsigned int key_w = 0;
+    if (output_option & OUTPUT_OPT_TABLE && output_option & OUTPUT_OPT_SEPARATOR) {
+        for (field = firstField; field; field = field->next) {
+            if ((field1 = filter_fieldcolumn(col, field))) {
+                key_w = (unsigned int) fmax(strlen(field1->key), key_w);
+                if (field1 != field) field_free(field1);
+            }
+        };
+    }
+
+    key_w = (unsigned int) fmin(50, key_w);
+    char *new_key;
+    for (field = firstField; field; field = field->next) {
         if ((field1 = filter_fieldcolumn(col, field))) {
+            if (key_w) {
+                new_key = str_pad_left(field1->key, ' ', key_w);
+                if (new_key != field1->key) free(field1->key);
+                field1->key = new_key;
+            }
             print_str_field(__output, field1, opt);
             if (field1 != field) field_free(field1);
             count++;
@@ -112,7 +130,13 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     };
 
     if (log->extra && F_SUCC == filter_column(col, COL_EXTRA, FCF_TEXT)) {
-        P_STR(__output, COL_EXTRA, log->extra, opt);
+        if (key_w) {
+            new_key = str_pad_left(COL_EXTRA, ' ', key_w);
+            P_STR(__output, new_key, log->extra, opt);
+            free(new_key);
+        } else {
+            P_STR(__output, COL_EXTRA, log->extra, opt);
+        }
         count++;
     }
 

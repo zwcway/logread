@@ -40,4 +40,6 @@ extern bool is_match(const char *str, const char *pattern) __THROW __attribute_p
 
 extern int char_count(const char *str, const char c) __THROW __attribute_pure__ __nonnull ((1));
 
+extern char *str_pad_left(const char *str, char pad, size_t len) __THROW __attribute_pure__ __nonnull ((1));
+
 #endif //LOGR_UTILS_H

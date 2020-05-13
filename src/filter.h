@@ -132,6 +132,14 @@ typedef struct Column_list {
 
 #define FC_IS_SUCCESS(cur) (!(cur) || !(cur)->column || !(*(cur)->column))
 #define FC_IS_END(cur)     ((!(cur) || !(cur)->next))
+#define FC_SET_FAILED(f) \
+{ \
+if(f) { \
+free((f)->key); \
+(f)->key = NULL; \
+} \
+return NULL; \
+}
 
 /**
  * 过滤器结构初始化 <br/>

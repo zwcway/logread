@@ -129,6 +129,11 @@ static int parse_app(Log *log, const char *line) {
         log->extra = sub_trim(key, steper - key);
     }
 
+    if (field && field->type == 0) {
+        field->prev->next = NULL;
+        field_free(field);
+    }
+
     STACK_FREE(stack);
 
     return count;

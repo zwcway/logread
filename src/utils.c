@@ -266,3 +266,18 @@ int str_replace(char * result, const char *s, const char *oldW, const char *newW
     result[i] = '\0';
     return i;
 }
+
+char *str_pad_left(const char *str, char pad, size_t len)
+{
+    size_t length = strlen(str);
+    if (length >= len) return (char*)str;
+
+    int pad_len = (int)(len - length);
+    char *string = (char*)calloc(sizeof(char), len + 1);
+
+    strcpy(string + pad_len, str);
+
+    while(pad_len--) string[pad_len] = pad;
+
+    return string;
+}

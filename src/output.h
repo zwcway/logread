@@ -21,6 +21,8 @@
 #define OUTPUT_OPT_NOTITLE      0b0000010
 // 输出分隔符
 #define OUTPUT_OPT_SEPARATOR    0b0000100
+// 格式化成表格
+#define OUTPUT_OPT_TABLE        0b0001000
 
 typedef struct OutputBuffer {
     size_t offset;

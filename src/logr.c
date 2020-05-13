@@ -23,7 +23,7 @@ int color_option = 0;
 bool dev_null_output = false;
 bool debug_flag = false;
 int output_type = 0;
-int output_option = 0;
+int output_option = OUTPUT_OPT_SEPARATOR;
 /**
  * 输出的操作符
  */
@@ -89,8 +89,7 @@ void PrintHelp(char *prog) {
     printf("\n");
     printf("  -C                   所有列必须同时存在。用法同 %s 。\n", CUNDER("-c|--column"));
     printf("  -K                   只输出值不输出字段名称。\n");
-    printf("  -t,--table           【TODO】 以表格形式输出。必须同时指定参数 %s\n", CUNDER("-c|-C"));
-    printf("                       同时自动应用参数 %s。\n", CUNDER("-K"));
+    printf("  -t,--table           以表格形式输出。将会强制指定 -d \\r\\n ");
     printf("  -d                   每个字段之间的分隔符。\n");
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
@@ -150,7 +149,7 @@ int ParseArg(int argc, char *argv[]) {
                     {0, 0,                          0,        0}
             };
 
-    while ((c = getopt_long(argc, argv, "hvjJC:f:c:Kd:", longopts, NULL)) != EOF) {
+    while ((c = getopt_long(argc, argv, "hvjJC:f:c:Kd:t", longopts, NULL)) != EOF) {
         switch (c) {
             case OPTION_HELP:
             case 'h':
@@ -186,6 +185,11 @@ int ParseArg(int argc, char *argv[]) {
                 break;
             case 'K':
                 output_option |= OUTPUT_OPT_NOKEY;
+                break;
+            case OPTION_TABLE:
+            case 't':
+                optarg = "\r\n";
+                output_option |= OUTPUT_OPT_TABLE;
                 break;
             case OPTION_DEBUG:
                 debug_flag = true;
