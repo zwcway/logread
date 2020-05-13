@@ -132,10 +132,10 @@ int print_log_to_str_column(void *arg, const Log *log, const Column_list *col, c
     if (log->extra && F_SUCC == filter_column(col, COL_EXTRA, FCF_TEXT)) {
         if (key_w) {
             new_key = str_pad_left(COL_EXTRA, ' ', key_w);
-            P_STR(__output, new_key, log->extra, opt);
+            P_STR(__output, new_key, log->extra, opt&~OUTPUT_OPT_SEPARATOR);
             free(new_key);
         } else {
-            P_STR(__output, COL_EXTRA, log->extra, opt);
+            P_STR(__output, COL_EXTRA, log->extra, opt&~OUTPUT_OPT_SEPARATOR);
         }
         count++;
     }
