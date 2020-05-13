@@ -89,7 +89,7 @@ void PrintHelp(char *prog) {
     printf("\n");
     printf("  -C                   所有列必须同时存在。用法同 %s 。\n", CUNDER("-c|--column"));
     printf("  -K                   只输出值不输出字段名称。\n");
-    printf("  -t,--table           以表格形式输出。将会强制指定 -d \\r\\n ");
+    printf("  -t,--table           以表格形式输出。将会强制指定 -d \\r\\n \n");
     printf("  -d                   每个字段之间的分隔符。\n");
     printf("\n");
     printf("  -f, --filter         过滤日志。格式如下：\n");
